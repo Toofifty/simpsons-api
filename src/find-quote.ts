@@ -1,4 +1,5 @@
 import { dbcon } from "./db";
+import { genSnap } from "./gen-snap";
 
 type FindQuoteOptions = {
   term: string;
@@ -6,6 +7,7 @@ type FindQuoteOptions = {
   episode?: number;
   seasonEpisode?: number;
   padding?: number;
+  snap?: boolean;
 };
 
 const clean = (term: string) => term.replace(/\W+/g, "").toLowerCase();
@@ -43,13 +45,13 @@ export const findQuote = async (options: FindQuoteOptions) => {
 
   // first step - search episode indices for term
   const [episodes] = await db.execute(`
-    select episodes.*, seasons.title as season from episodes
+    select episodes.*, seasons.title as season, seasons.id as season_id from episodes
     join seasons on episodes.season_id = seasons.id
     where subtitle_index like '%${term}%'
     ${extraClause}
   `);
 
-  const matches = episodes.length;
+  const matches: number = episodes.length;
 
   console.log("- matches:", matches);
 
@@ -108,7 +110,7 @@ export const findQuote = async (options: FindQuoteOptions) => {
     limit ${options.padding}
   `);
 
-  return {
+  const response = {
     matches,
     best: {
       data: {
@@ -122,4 +124,14 @@ export const findQuote = async (options: FindQuoteOptions) => {
       after: afterSubtitles.map(pruneResponseRecord),
     },
   };
+
+  if (options.snap) {
+    (response.best.data as any).snap = await genSnap(
+      bestMatch.season_id,
+      bestMatch.id_in_season,
+      matchedSubtitles[0].time_begin
+    );
+  }
+
+  return response;
 };
