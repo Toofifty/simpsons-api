@@ -2,11 +2,27 @@ import ffmpeg from "fluent-ffmpeg";
 import path from "path";
 import * as fs from "fs";
 import { dbcon } from "./db";
-import { tsToSeconds } from "./util";
+import { tsToSeconds, secondsToTS } from "./util";
 import { env } from "./env";
+import { Subtitle } from "./types";
 
 const getGifName = (beginSubtitleId: number, endSubtitleId: number) =>
   `b${beginSubtitleId}e${endSubtitleId}.gif`;
+
+const offsetSubtitles = (subtitles: Subtitle[], offset: number) =>
+  subtitles.map((subtitle) => ({
+    ...subtitle,
+    time_begin: secondsToTS(tsToSeconds(subtitle.time_begin) + offset),
+    time_end: secondsToTS(tsToSeconds(subtitle.time_end) + offset),
+  }));
+
+const createVTT = (subtitles: Subtitle[]) =>
+  subtitles
+    .map(
+      ({ time_begin, time_end, text }) =>
+        `${time_begin} --> ${time_end} line:90%,end\n${text}`
+    )
+    .join("\n\n");
 
 export const genGif = async (
   beginSubtitleId: number,
@@ -59,15 +75,44 @@ export const genGif = async (
   const [first] = subtitles;
   const last = subtitles[subtitles.length - 1];
 
+  const shiftedSubtitles = offsetSubtitles(
+    subtitles,
+    -tsToSeconds(first.time_begin)
+  );
+  const vtt = createVTT(shiftedSubtitles);
+
+  const subtitlePath = (ext: string) =>
+    path.join(
+      __dirname,
+      env.DATA,
+      `b${beginSubtitleId}e${endSubtitleId}.${ext}`
+    );
+
+  fs.writeFileSync(subtitlePath("vtt"), vtt);
+
+  await new Promise((res, rej) => {
+    ffmpeg(subtitlePath("vtt"))
+      .on("end", res)
+      .on("error", rej)
+      .save(subtitlePath("ass"));
+  });
+
   await new Promise((res, rej) => {
     ffmpeg(path.join(__dirname, env.DATA, "source", source))
       .seekInput(first.time_begin)
       .duration(tsToSeconds(last.time_end) - tsToSeconds(first.time_begin))
-      .videoFilters(["fps=15", "scale=320:-1:flags=lanczos"])
+      .videoFilters([
+        "fps=15",
+        "scale=320:-1:flags=lanczos",
+        `ass=${subtitlePath("ass")}`,
+      ])
       .on("end", res)
       .on("error", rej)
       .save(path.join(__dirname, env.DATA, "gifs", gifName));
   });
+
+  fs.unlink(subtitlePath("vtt"), () => {});
+  fs.unlink(subtitlePath("ass"), () => {});
 
   return gifName;
 };
