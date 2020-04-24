@@ -2,6 +2,7 @@ import express from "express";
 import http from "http";
 import cors from "cors";
 import path from "path";
+import { env } from "./env";
 import { error } from "./error";
 import { findQuote } from "./find-quote";
 import { findStats } from "./stats";
@@ -16,7 +17,7 @@ app.use(cors());
 app.use("/snaps", express.static(path.join(__dirname, "../data/snaps")));
 app.use("/gifs", express.static(path.join(__dirname, "../data/gifs")));
 
-server.listen(process.env.PORT || 3312, () => {
+server.listen(env.PORT || 3312, () => {
   console.log("Simpsons API ready");
 });
 

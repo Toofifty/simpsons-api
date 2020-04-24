@@ -1,5 +1,7 @@
-export const hostname = process.env.HOST
-  ? `https://${process.env.HOST}`
+import { env } from "./env";
+
+export const hostname = env.HOST
+  ? `https://${env.HOST}`
   : "http://localhost:3312";
 
 export const tsToSeconds = (ts: string) => {
