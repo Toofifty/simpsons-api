@@ -111,8 +111,5 @@ export const genGif = async (
       .save(path.join(__dirname, env.DATA, "gifs", gifName));
   });
 
-  fs.unlink(subtitlePath("vtt"), () => {});
-  fs.unlink(subtitlePath("ass"), () => {});
-
   return gifName;
 };
