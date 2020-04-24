@@ -17,12 +17,14 @@ const offsetSubtitles = (subtitles: Subtitle[], offset: number) =>
   }));
 
 const createVTT = (subtitles: Subtitle[]) =>
+  "WEBVTT\n\n" +
   subtitles
     .map(
       ({ time_begin, time_end, text }) =>
-        `${time_begin} --> ${time_end} line:90%,end\n${text}`
+        `${time_begin} --> ${time_end}\n${text}`
     )
-    .join("\n\n");
+    .join("\n\n") +
+  "\n";
 
 export const genGif = async (
   beginSubtitleId: number,
