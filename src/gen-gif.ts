@@ -1,7 +1,9 @@
 import ffmpeg from "fluent-ffmpeg";
+import path from "path";
 import * as fs from "fs";
 import { dbcon } from "./db";
 import { tsToSeconds } from "./util";
+import { env } from "./env";
 
 const getGifName = (beginSubtitleId: number, endSubtitleId: number) =>
   `b${beginSubtitleId}e${endSubtitleId}.gif`;
@@ -11,7 +13,7 @@ export const genGif = async (
   endSubtitleId: number
 ) => {
   const gifName = getGifName(beginSubtitleId, endSubtitleId);
-  if (fs.existsSync(`data/gifs/${gifName}`)) {
+  if (fs.existsSync(path.join(__dirname, env.DATA, "gifs", gifName))) {
     return gifName;
   }
 
@@ -44,7 +46,7 @@ export const genGif = async (
     where id = ${episodeId}
   `);
 
-  const sources = fs.readdirSync("data/source");
+  const sources = fs.readdirSync(path.join(__dirname, env.DATA, "source"));
   const episodeRegex = new RegExp(
     `S0?${episode.season_id}E0?${episode.id_in_season}`
   );
@@ -58,13 +60,13 @@ export const genGif = async (
   const last = subtitles[subtitles.length - 1];
 
   await new Promise((res, rej) => {
-    ffmpeg(`data/source/${source}`)
+    ffmpeg(path.join(__dirname, env.DATA, "source", source))
       .seekInput(first.time_begin)
       .duration(tsToSeconds(last.time_end) - tsToSeconds(first.time_begin))
       .videoFilters(["fps=15", "scale=320:-1:flags=lanczos"])
       .on("end", res)
       .on("error", rej)
-      .save(`data/gifs/${gifName}`);
+      .save(path.join(__dirname, env.DATA, "gifs", gifName));
   });
 
   return gifName;

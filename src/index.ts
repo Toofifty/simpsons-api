@@ -14,8 +14,8 @@ const server = http.createServer(app);
 
 app.use(cors());
 
-app.use("/snaps", express.static(path.join(__dirname, "../data/snaps")));
-app.use("/gifs", express.static(path.join(__dirname, "../data/gifs")));
+app.use("/snaps", express.static(path.join(__dirname, env.DATA, "snaps")));
+app.use("/gifs", express.static(path.join(__dirname, env.DATA, "gifs")));
 
 server.listen(env.PORT || 3312, () => {
   console.log("Simpsons API ready");
@@ -81,7 +81,7 @@ app.get("/gif", async (req, res) => {
   }
 
   if (req.query.render) {
-    return res.sendFile(path.join(__dirname, "../data/gifs", gifPath));
+    return res.sendFile(path.join(__dirname, env.DATA, "gifs", gifPath));
   }
 
   return res.send({
