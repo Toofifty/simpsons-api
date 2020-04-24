@@ -81,21 +81,13 @@ export const genGif = async (
   );
   const vtt = createVTT(shiftedSubtitles);
 
-  const subtitlePath = (ext: string) =>
-    path.join(
-      __dirname,
-      env.DATA,
-      `b${beginSubtitleId}e${endSubtitleId}.${ext}`
-    );
+  const subtitlePath = path.join(
+    __dirname,
+    env.DATA,
+    `b${beginSubtitleId}e${endSubtitleId}.vtt`
+  );
 
-  fs.writeFileSync(subtitlePath("vtt"), vtt);
-
-  await new Promise((res, rej) => {
-    ffmpeg(subtitlePath("vtt"))
-      .on("end", res)
-      .on("error", rej)
-      .save(subtitlePath("ass"));
-  });
+  fs.writeFileSync(subtitlePath, vtt);
 
   await new Promise((res, rej) => {
     ffmpeg(path.join(__dirname, env.DATA, "source", source))
@@ -104,7 +96,7 @@ export const genGif = async (
       .videoFilters([
         "fps=15",
         "scale=320:-1:flags=lanczos",
-        `ass=${subtitlePath("ass")}`,
+        `subtitles=${subtitlePath}`,
       ])
       .on("end", res)
       .on("error", rej)
