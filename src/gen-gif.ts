@@ -26,12 +26,21 @@ const createVTT = (subtitles: Subtitle[]) =>
     .join("\n\n") +
   "\n";
 
+type GenGifOptions = {
+  offset?: number;
+  extend?: number;
+};
+
 export const genGif = async (
   beginSubtitleId: number,
-  endSubtitleId: number
+  endSubtitleId: number,
+  options: GenGifOptions = {}
 ) => {
   const gifName = getGifName(beginSubtitleId, endSubtitleId);
-  if (fs.existsSync(path.join(__dirname, env.DATA, "gifs", gifName))) {
+  if (
+    env.USE_CACHE &&
+    fs.existsSync(path.join(__dirname, env.DATA, "gifs", gifName))
+  ) {
     return gifName;
   }
 
@@ -93,12 +102,18 @@ export const genGif = async (
 
   await new Promise((res, rej) => {
     ffmpeg(path.join(__dirname, env.DATA, "source", source))
-      .seekInput(first.time_begin)
-      .duration(tsToSeconds(last.time_end) - tsToSeconds(first.time_begin))
+      .seekInput(
+        secondsToTS(tsToSeconds(first.time_begin) + (options.offset ?? 0))
+      )
+      .duration(
+        (options.extend ?? 0) +
+          tsToSeconds(last.time_end) -
+          tsToSeconds(first.time_begin)
+      )
       .videoFilters([
         "fps=15",
         "scale=320:-1:flags=lanczos",
-        `subtitles=${subtitlePath}`,
+        `subtitles=${subtitlePath}:force_style='FontSize=24'`,
       ])
       .on("end", res)
       .on("error", rej)

@@ -74,7 +74,10 @@ app.get("/gif", async (req, res) => {
   }
   let gifPath = "";
   try {
-    gifPath = await genGif(Number(req.query.begin), Number(req.query.end));
+    gifPath = await genGif(Number(req.query.begin), Number(req.query.end), {
+      offset: req.query.offset ? Number(req.query.offset) : undefined,
+      extend: req.query.extend ? Number(req.query.extend) : undefined,
+    });
   } catch (e) {
     if (typeof e === "string") return res.send(error(e));
     throw e;
