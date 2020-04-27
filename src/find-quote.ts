@@ -25,9 +25,10 @@ export const findQuote = async (options: FindQuoteOptions) => {
     options.padding = 5;
   }
 
-  const term = clean(options.term);
+  const term = options.term.split("[...]").map(clean).join("%");
 
   console.log("REQUEST", options);
+  console.log("- parsed term", term);
 
   let extraClause = "";
 
@@ -66,8 +67,22 @@ export const findQuote = async (options: FindQuoteOptions) => {
 
   // second step - use index values from first search
   // to locate subtitle records
-  const beginIndex = bestMatch.subtitle_index.indexOf(term);
-  const endIndex = beginIndex + term.length;
+
+  const parts = term.split("%");
+  let beginIndex: number, endIndex: number;
+
+  if (parts.length === 1) {
+    beginIndex = bestMatch.subtitle_index.indexOf(term);
+    endIndex = beginIndex + term.length;
+  } else {
+    // multi-term search
+    const lastPart = parts[parts.length - 1];
+    beginIndex = bestMatch.subtitle_index.indexOf(parts[0]);
+    endIndex =
+      beginIndex +
+      bestMatch.subtitle_index.substr(beginIndex).indexOf(lastPart) +
+      lastPart.length;
+  }
 
   const [matchedSubtitles] = await db.execute(`
     select * from subtitles
