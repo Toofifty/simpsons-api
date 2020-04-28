@@ -42,7 +42,7 @@ export const findQuote = async (options: FindQuoteOptions) => {
   }
 
   // load db
-  const db = await dbcon;
+  const db = await dbcon();
 
   // first step - search episode indices for term
   const [episodes] = await db.execute(`

@@ -44,7 +44,7 @@ export const genGif = async (
     return gifName;
   }
 
-  const db = await dbcon;
+  const db = await dbcon();
 
   const [subtitles] = await db.execute(`
     select * from subtitles
