@@ -58,7 +58,7 @@ export const genGif = async (
   }
 
   // TODO: pick better max
-  if (subtitles.length > 10) {
+  if (subtitles.length > 50) {
     throw "Gif would be too long";
   }
 
