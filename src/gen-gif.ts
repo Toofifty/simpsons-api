@@ -1,10 +1,11 @@
-import ffmpeg from "fluent-ffmpeg";
-import path from "path";
-import * as fs from "fs";
-import { dbcon } from "./db";
-import { tsToSeconds, secondsToTS } from "./util";
-import { env } from "./env";
-import { Subtitle } from "./types";
+import ffmpeg from 'fluent-ffmpeg';
+import path from 'path';
+import * as fs from 'fs';
+
+import { dbcon } from './db';
+import { tsToSeconds, secondsToTS } from './utils';
+import { Subtitle } from './types';
+import { config } from './config';
 
 const getGifName = (beginSubtitleId: number, endSubtitleId: number) =>
   `b${beginSubtitleId}e${endSubtitleId}.gif`;
@@ -17,14 +18,14 @@ const offsetSubtitles = (subtitles: Subtitle[], offset: number) =>
   }));
 
 const createVTT = (subtitles: Subtitle[]) =>
-  "WEBVTT\n\n" +
+  'WEBVTT\n\n' +
   subtitles
     .map(
       ({ time_begin, time_end, text }) =>
         `${time_begin} --> ${time_end}\n${text}`
     )
-    .join("\n\n") +
-  "\n";
+    .join('\n\n') +
+  '\n';
 
 type GenGifOptions = {
   offset?: number;
@@ -38,8 +39,8 @@ export const genGif = async (
 ) => {
   const gifName = getGifName(beginSubtitleId, endSubtitleId);
   if (
-    env.USE_CACHE &&
-    fs.existsSync(path.join(__dirname, env.DATA, "gifs", gifName))
+    process.env.USE_CACHE &&
+    fs.existsSync(path.join(__dirname, config('DATA_DIR'), 'gifs', gifName))
   ) {
     return gifName;
   }
@@ -54,18 +55,18 @@ export const genGif = async (
   `);
 
   if (subtitles.length === 0) {
-    throw "Could not find phrase";
+    throw 'Could not find phrase';
   }
 
   // TODO: pick better max
   if (subtitles.length > 50) {
-    throw "Gif would be too long";
+    throw 'Gif would be too long';
   }
 
   const episodeId = subtitles[0].episode_id;
 
   if (subtitles.some((subtitle: any) => subtitle.episode_id !== episodeId)) {
-    throw "Cannot create gif from multiple episodes";
+    throw 'Cannot create gif from multiple episodes';
   }
 
   const [[episode]] = await db.execute(`
@@ -73,14 +74,16 @@ export const genGif = async (
     where id = ${episodeId}
   `);
 
-  const sources = fs.readdirSync(path.join(__dirname, env.DATA, "source"));
+  const sources = fs.readdirSync(
+    path.join(__dirname, config('DATA_DIR'), 'source')
+  );
   const episodeRegex = new RegExp(
     `S0?${episode.season_id}E0?${episode.id_in_season}`
   );
   const source = sources.find((source) => episodeRegex.test(source));
 
   if (!source) {
-    throw "That episode is not available";
+    throw 'That episode is not available';
   }
 
   const [first] = subtitles;
@@ -94,14 +97,14 @@ export const genGif = async (
 
   const subtitlePath = path.join(
     __dirname,
-    env.DATA,
+    config('DATA_DIR'),
     `b${beginSubtitleId}e${endSubtitleId}.vtt`
   );
 
   fs.writeFileSync(subtitlePath, vtt);
 
   await new Promise((res, rej) => {
-    ffmpeg(path.join(__dirname, env.DATA, "source", source))
+    ffmpeg(path.join(__dirname, config('DATA_DIR'), 'source', source))
       .seekInput(
         secondsToTS(tsToSeconds(first.time_begin) + (options.offset ?? 0))
       )
@@ -111,13 +114,13 @@ export const genGif = async (
           tsToSeconds(first.time_begin)
       )
       .videoFilters([
-        "fps=15",
-        "scale=320:-1:flags=lanczos",
+        'fps=15',
+        'scale=320:-1:flags=lanczos',
         `subtitles=${subtitlePath}:force_style='FontSize=24'`,
       ])
-      .on("end", res)
-      .on("error", rej)
-      .save(path.join(__dirname, env.DATA, "gifs", gifName));
+      .on('end', res)
+      .on('error', rej)
+      .save(path.join(__dirname, config('DATA_DIR'), 'gifs', gifName));
   });
 
   return gifName;

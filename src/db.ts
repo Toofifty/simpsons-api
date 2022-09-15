@@ -1,10 +1,11 @@
-import mysql from "mysql2/promise";
-import { env } from "./env";
+import mysql from 'mysql2/promise';
+
+import { config } from './config';
 
 export const dbcon = () =>
   mysql.createConnection({
-    host: env.DB_HOST,
-    user: env.DB_USER,
-    password: env.DB_PASS,
-    database: env.DB_NAME,
+    host: config('DB_HOST'),
+    user: config('DB_USER'),
+    password: config('DB_PASS'),
+    database: config('DB_NAME'),
   });

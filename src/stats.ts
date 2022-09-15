@@ -1,4 +1,4 @@
-import { dbcon } from "db";
+import { dbcon } from "./db";
 
 export const findStats = async () => {
   const db = await dbcon();

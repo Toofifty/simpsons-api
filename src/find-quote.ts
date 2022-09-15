@@ -1,5 +1,5 @@
-import { dbcon } from "./db";
-import { genSnap } from "./gen-snap";
+import { dbcon } from './db';
+import { genSnap } from './gen-snap';
 
 type FindQuoteOptions = {
   term: string;
@@ -10,7 +10,7 @@ type FindQuoteOptions = {
   snap?: boolean;
 };
 
-const clean = (term: string) => term.replace(/\W+/g, "").toLowerCase();
+const clean = (term: string) => term.replace(/\W+/g, '').toLowerCase();
 
 const pruneResponseRecord = (record: any) => ({
   id: record.id,
@@ -25,12 +25,12 @@ export const findQuote = async (options: FindQuoteOptions) => {
     options.padding = 5;
   }
 
-  const term = options.term.split("[...]").map(clean).join("%");
+  const term = options.term.split('[...]').map(clean).join('%');
 
-  console.log("REQUEST", options);
-  console.log("- parsed term", term);
+  console.log('REQUEST', options);
+  console.log('- parsed term', term);
 
-  let extraClause = "";
+  let extraClause = '';
 
   if (options.season) {
     extraClause = `and season_id = ${options.season}`;
@@ -54,7 +54,7 @@ export const findQuote = async (options: FindQuoteOptions) => {
 
   const matches: number = episodes.length;
 
-  console.log("- matches:", matches);
+  console.log('- matches:', matches);
 
   if (matches === 0) {
     return { matches };
@@ -63,12 +63,12 @@ export const findQuote = async (options: FindQuoteOptions) => {
   // TODO: better way to determine best match?
   const [bestMatch] = episodes;
 
-  console.log("- best:", bestMatch.title);
+  console.log('- best:', bestMatch.title);
 
   // second step - use index values from first search
   // to locate subtitle records
 
-  const parts = term.split("%");
+  const parts = term.split('%');
   let beginIndex: number, endIndex: number;
 
   if (parts.length === 1) {
@@ -103,7 +103,7 @@ export const findQuote = async (options: FindQuoteOptions) => {
     order by id asc
   `);
 
-  console.log("- subtitle count:", matchedSubtitles.length);
+  console.log('- subtitle count:', matchedSubtitles.length);
 
   // third step - get `padding` subtitles from before and
   // after matched range
