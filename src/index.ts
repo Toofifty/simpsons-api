@@ -3,8 +3,7 @@ import http from 'http';
 import cors from 'cors';
 import { RequestContext } from '@mikro-orm/core';
 
-import { error } from './error';
-import { getDataPath, url, removeUndefined } from './utils';
+import { getDataPath, url, removeEmpty, error } from './utils';
 import { gifService, quoteService, statsService } from './services';
 import { orm } from './orm';
 
@@ -39,7 +38,7 @@ app.get('/quote', async (req, res) => {
   return res.send({
     status: 200,
     data: await quoteService.find(
-      removeUndefined({
+      removeEmpty({
         term: req.query['term'].toString(),
         season: Number(req.query['season']),
         episode: Number(req.query['episode']),
@@ -54,12 +53,12 @@ app.get('/quote', async (req, res) => {
 
 app.get('/gif', async (req, res) => {
   if (req.query['term']) {
-    const data = await quoteService.find({
-      term: req.query['term'].toString(),
-      ...(req.query['match'] && {
+    const data = await quoteService.find(
+      removeEmpty({
+        term: req.query['term'].toString(),
         match: Number(req.query['match']),
-      }),
-    });
+      })
+    );
     if (data.matches) {
       const first = data.matches.lines[0]!;
       const last = data.matches.lines[data.matches.lines.length - 1]!;
@@ -82,10 +81,10 @@ app.get('/gif', async (req, res) => {
     const path = await gifService.generate(
       Number(req.query['begin']),
       Number(req.query['end']),
-      {
-        offset: req.query['offset'] ? Number(req.query['offset']) : undefined,
-        extend: req.query['extend'] ? Number(req.query['extend']) : undefined,
-      }
+      removeEmpty({
+        offset: Number(req.query['offset']),
+        extend: Number(req.query['extend']),
+      })
     );
 
     if (req.query['render']) {
