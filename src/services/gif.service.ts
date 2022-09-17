@@ -22,7 +22,7 @@ export const gifService = {
     const filename = this.getName(beginSubtitleId, endSubtitleId);
 
     if (config('USE_CACHE') && existsSync(getDataPath('gifs', filename))) {
-      return filename;
+      return { filename, renderTime: 0 };
     }
 
     const subtitles = await subtitleRepository.find({
@@ -61,7 +61,7 @@ export const gifService = {
 
     writeFileSync(subtitlePath, vtt);
 
-    await ffmpegService.saveGif({
+    const renderTime = await ffmpegService.saveGif({
       source,
       offset: tsToSeconds(first.timeBegin) + (options.offset ?? 0),
       duration:
@@ -72,7 +72,7 @@ export const gifService = {
       output: filename,
     });
 
-    return filename;
+    return { filename, renderTime };
   },
 
   createVTT(subtitles: Subtitle[], offset: number) {

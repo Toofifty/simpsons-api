@@ -18,15 +18,16 @@ interface SaveSnapOptions {
 
 export const ffmpegService = {
   saveGif({ source, duration, offset, subtitlePath, output }: SaveGifOptions) {
-    return new Promise((res, rej) => {
+    return new Promise<number>((res, rej) => {
+      const start = Date.now();
       ffmpeg(getDataPath('source', source))
         .seekInput(offset)
         .duration(duration)
-        .on('end', res)
+        .on('end', () => res(Date.now() - start))
         .on('error', rej)
         .videoFilters([
-          'fps=15',
-          'scale=640:-1:flags=lanczos',
+          'fps=24',
+          'scale=360:-1:flags=lanczos',
           `subtitles=${subtitlePath}:force_style='FontSize=24'`,
         ])
         .save(getDataPath('gifs', output));
@@ -34,11 +35,12 @@ export const ffmpegService = {
   },
 
   saveSnap({ source, offset, output }: SaveSnapOptions) {
-    return new Promise((res, rej) => {
+    return new Promise<number>((res, rej) => {
+      const start = Date.now();
       ffmpeg(getDataPath('source', source))
         .seekInput(offset)
         .takeFrames(1)
-        .on('end', res)
+        .on('end', () => res(Date.now() - start))
         .on('error', rej)
         .save(getDataPath('snaps', output));
     });
