@@ -38,6 +38,9 @@ export class Episode {
   @OneToMany(() => Subtitle, (subtitle) => subtitle.episode)
   subtitles = new Collection<Subtitle>(this);
 
+  @Property({ type: 'number' })
+  subtitleCorrection = 0;
+
   public get source() {
     const sources = readdirSync(getDataPath('source'));
     const episodeRegex = new RegExp(

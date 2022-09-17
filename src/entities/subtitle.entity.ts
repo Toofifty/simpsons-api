@@ -1,6 +1,7 @@
 import {
   Entity,
   EntityRepositoryType,
+  IdentifiedReference,
   ManyToOne,
   PrimaryKey,
   Property,
@@ -16,8 +17,8 @@ export class Subtitle {
   @PrimaryKey({ type: 'number' })
   id!: number;
 
-  @ManyToOne(() => Episode)
-  episode!: Episode;
+  @ManyToOne(() => Episode, { wrappedReference: true })
+  episode!: IdentifiedReference<Episode>;
 
   @Property({ type: 'string' })
   timeBegin!: string;

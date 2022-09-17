@@ -101,6 +101,15 @@
           "primary": false,
           "nullable": false,
           "mappedType": "string"
+        },
+        "subtitle_correction": {
+          "name": "subtitle_correction",
+          "type": "int",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "mappedType": "integer"
         }
       },
       "name": "episodes",

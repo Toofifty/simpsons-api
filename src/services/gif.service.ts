@@ -7,19 +7,26 @@ import { ends, getDataPath, tsToSeconds } from '../utils';
 import { ffmpegService } from './ffmpeg.service';
 
 interface GenGifOptions {
+  subtitles?: boolean;
   offset?: number;
   extend?: number;
 }
+
+const defaultOptions: Partial<GenGifOptions> = {
+  subtitles: true,
+};
 
 export const gifService = {
   async generate(
     beginSubtitleId: number,
     endSubtitleId: number,
-    options: GenGifOptions = {}
+    rawOptions: GenGifOptions = {}
   ) {
+    const options = { ...defaultOptions, ...rawOptions };
+
     const subtitleRepository = orm.em.getRepository(Subtitle);
     const episodeRepository = orm.em.getRepository(Episode);
-    const filename = this.getName(beginSubtitleId, endSubtitleId);
+    const filename = this.getName(beginSubtitleId, endSubtitleId, options);
 
     if (config('USE_CACHE') && existsSync(getDataPath('gifs', filename))) {
       return { filename, renderTime: 0 };
@@ -37,13 +44,13 @@ export const gifService = {
       throw 'Gif would be too long';
     }
 
-    if (subtitles[0]?.episode !== subtitles[subtitles.length - 1]?.episode) {
+    if (
+      subtitles[0]?.episode.id !== subtitles[subtitles.length - 1]?.episode.id
+    ) {
       throw 'Cannot create gif from multiple episodes';
     }
 
-    const episode = await episodeRepository.findOneOrFail(
-      subtitles[0]?.episode.id!
-    );
+    const episode = (await subtitles[0]?.episode.load())!;
     const source = episode.source;
 
     if (!source) {
@@ -52,7 +59,7 @@ export const gifService = {
 
     const [first, last] = ends(subtitles);
 
-    const vtt = this.createVTT(subtitles, -tsToSeconds(first.timeBegin));
+    const vtt = await this.createVTT(subtitles, -tsToSeconds(first.timeBegin));
 
     const subtitlePath = getDataPath(
       'vtt',
@@ -63,19 +70,22 @@ export const gifService = {
 
     const renderTime = await ffmpegService.saveGif({
       source,
-      offset: tsToSeconds(first.timeBegin) + (options.offset ?? 0),
+      offset:
+        tsToSeconds(first.timeBegin) +
+        (options.offset ?? 0) +
+        episode.subtitleCorrection / 1000,
       duration:
         (options.extend ?? 0) +
         tsToSeconds(last.timeEnd) -
         tsToSeconds(first.timeBegin),
-      subtitlePath,
+      subtitlePath: options.subtitles ? subtitlePath : undefined,
       output: filename,
     });
 
     return { filename, renderTime };
   },
 
-  createVTT(subtitles: Subtitle[], offset: number) {
+  async createVTT(subtitles: Subtitle[], offset: number) {
     return (
       'WEBVTT\n\n' +
       subtitles
@@ -90,7 +100,15 @@ export const gifService = {
     );
   },
 
-  getName(beginSubtitleId: number, endSubtitleId: number) {
-    return `b${beginSubtitleId}e${endSubtitleId}.gif`;
+  getName(
+    beginSubtitleId: number,
+    endSubtitleId: number,
+    options: GenGifOptions
+  ) {
+    return `b${beginSubtitleId}e${endSubtitleId}${
+      options.subtitles ? 's' : 'ns'
+    }${options.offset ? `~${options.offset}` : ''}${
+      options.extend ? `+${options.extend}` : ''
+    }.gif`;
   },
 };

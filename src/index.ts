@@ -100,6 +100,7 @@ app.get('/gif', async (req, res) => {
       removeEmpty({
         offset: Number(req.query['offset']),
         extend: Number(req.query['extend']),
+        subtitles: req.query['subtitles'] === 'false' ? false : undefined,
       })
     );
 

@@ -6,7 +6,7 @@ interface SaveGifOptions {
   source: string;
   offset: number;
   duration: number;
-  subtitlePath: string;
+  subtitlePath?: string;
   output: string;
 }
 
@@ -28,7 +28,9 @@ export const ffmpegService = {
         .videoFilters([
           'fps=24',
           'scale=360:-1:flags=lanczos',
-          `subtitles=${subtitlePath}:force_style='FontSize=24'`,
+          ...(subtitlePath
+            ? [`subtitles=${subtitlePath}:force_style='FontSize=24'`]
+            : []),
         ])
         .save(getDataPath('gifs', output));
     });
