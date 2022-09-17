@@ -1,4 +1,5 @@
-import { config } from './config';
+import { config } from '../config';
+export * from './normalise-term';
 
 export const hostname = config('HOST')
   ? `https://${config('HOST')}`
@@ -6,7 +7,7 @@ export const hostname = config('HOST')
 
 export const tsToSeconds = (ts: string) => {
   const [h, m, s] = ts.split(':').map(Number);
-  return s + m * 60 + h * 60 * 60;
+  return s! + m! * 60 + h! * 60 * 60;
 };
 
 export const padZero = (num: number | string) => {

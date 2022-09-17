@@ -1,18 +1,13 @@
 {
-  "compileOnSave": false,
-  "compilerOptions": {
-    "sourceMap": true,
-    "declaration": false,
-    "moduleResolution": "node",
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "target": "es5",
-    "lib": ["es2016", "dom"],
-    "outDir": "dist",
-    "module": "commonjs",
-    "esModuleInterop": true,
-    "strict": true,
-    "strictNullChecks": true
+  "extends": "@tsconfig/node16-strictest-esm/tsconfig.json",
+  "ts-node": {
+    "transpileOnly": true,
+    "files": true
   },
-  "include": ["src/**/*.ts", "src/shims.d.ts"]
+  "include": ["src/**/*.ts", "src/shims.d.ts", "src/db/types.ts"],
+  "compilerOptions": {
+    "exactOptionalPropertyTypes": false,
+    "experimentalDecorators": true,
+    "outDir": "dist"
+  }
 }

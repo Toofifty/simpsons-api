@@ -4,7 +4,7 @@ import * as fs from 'fs';
 
 import { dbcon } from './db';
 import { tsToSeconds, secondsToTS } from './utils';
-import { Subtitle } from './types';
+import type { Subtitle } from './types';
 import { config } from './config';
 
 const getGifName = (beginSubtitleId: number, endSubtitleId: number) =>
@@ -39,7 +39,7 @@ export const genGif = async (
 ) => {
   const gifName = getGifName(beginSubtitleId, endSubtitleId);
   if (
-    process.env.USE_CACHE &&
+    config('USE_CACHE') &&
     fs.existsSync(path.join(__dirname, config('DATA_DIR'), 'gifs', gifName))
   ) {
     return gifName;
