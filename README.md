@@ -13,10 +13,11 @@ Identify a quote (and surrounding subtitles) matching the search criteria. Suppo
 | Option | Required | Default | Description |
 | :--- | :---: | --- | --- |
 | `term` | ✅ | | Text-based search term. See [Search term index](#Search_term_index). |
-| `season` |  | All | Refine search by season. Quote API supports seasons 1-29. |
+| `season` | | All | Refine search by season. Quote API supports seasons 1-29. |
 | `episode` | | All | Refine search by absolute episode number. e.g. `250` is S12E03 "Insane Clown Poppy" |
 | `seasonEpisode` | | All | Refine search by relative episode number in its season (beginning at 1). |
 | `padding` | | `5` | Amount of extra subtitles to return before and after the matched quote. |
+| `match` | | `0` | Return a particular match by ID if there are multiple matching quotes. |
 | `snap` | | `false` | Return a screenshot from the beginning of the matched quote. |
 
 ### `/gif`

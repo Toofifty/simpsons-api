@@ -1,8 +1,10 @@
-import { normalizeTerm } from '../utils';
+import { URL } from 'url';
+
+import { url, normalizeTerm } from '../utils';
 import { orm } from '../orm';
 import { Episode } from '../entities/episode.entity';
 import { Subtitle } from '../entities';
-import { genSnap } from '../gen-snap';
+import { snapService } from './snap.service';
 
 interface FindQuoteOptions {
   term: string;
@@ -35,7 +37,7 @@ export const quoteService = {
     const [[episode], matches] = await episodeRepository.search(options);
 
     if (!episode) {
-      return { matches };
+      return { meta: { total_matches: matches } };
     }
 
     const [beginIndex, endIndex] = this.findIndices(episode, term);
@@ -69,14 +71,22 @@ export const quoteService = {
         episode_in_season: episode.idInSeason,
       },
       links: {
-        next: 'http://',
+        ...(options.match > 0 && {
+          previous_match: this.getUrl({
+            ...rawOptions,
+            match: options.match - 1,
+          }),
+        }),
+        ...(options.match < matches - 1 && {
+          next_match: this.getUrl({ ...rawOptions, match: options.match + 1 }),
+        }),
       },
       snap: options.snap
-        ? await genSnap(
-            episode.season.id,
-            episode.idInSeason,
-            matchedSubtitles[0]?.timeBegin!
-          )
+        ? await snapService.generate({
+            seasonId: episode.season.id,
+            episodeInSeason: episode.idInSeason,
+            time: matchedSubtitles[0]?.timeBegin!,
+          })
         : undefined,
       matches: {
         lines: matchedSubtitles.map((subtitle) => subtitle.normalize()),
@@ -101,5 +111,13 @@ export const quoteService = {
       index,
       index + episode.subtitleIndex.slice(index).indexOf(last) + last.length,
     ] as const;
+  },
+
+  getUrl(options: FindQuoteOptions) {
+    const uri = new URL(url('quote'));
+    Object.entries(options).forEach(([key, value]) => {
+      uri.searchParams.set(key, value.toString());
+    });
+    return uri.toString();
   },
 };

@@ -1,15 +1,14 @@
 import type { Options } from '@mikro-orm/core';
 import type { MySqlDriver } from '@mikro-orm/mysql';
-import { config } from './config';
-import * as entities from './entities';
 
 export default {
   debug: true,
-  entities: Object.values(entities),
+  entities: ['./dist/entities/*.entity.js'],
+  entitiesTs: ['./src/entities/*.entity.ts'],
   dbName: 'simpsons-api',
   type: 'mysql',
-  host: config('DB_HOST'),
-  user: config('DB_USER'),
-  password: config('DB_PASS'),
-  database: config('DB_NAME'),
+  host: process.env['DB_HOST'],
+  user: process.env['DB_USER'],
+  password: process.env['DB_PASS'],
+  database: process.env['DB_NAME'],
 } as Options<MySqlDriver>;

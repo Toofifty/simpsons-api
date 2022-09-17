@@ -43,7 +43,6 @@ export class SubtitleRepository extends EntityRepository<Subtitle> {
   }
 
   async findPrevious({ maxId, limit }: { maxId: number; limit: number }) {
-    console.log('findPrevious', { maxId, limit });
     return this.find(
       { id: { $lt: maxId } },
       { orderBy: { id: 'desc' }, limit }

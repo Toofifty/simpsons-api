@@ -7,7 +7,9 @@ import {
   PrimaryKey,
   Property,
 } from '@mikro-orm/core';
+import { readdirSync } from 'fs';
 import { EpisodeRepository } from '../repositories';
+import { getDataPath } from '../utils';
 import { Season } from './season.entity';
 import { Subtitle } from './subtitle.entity';
 
@@ -35,4 +37,12 @@ export class Episode {
 
   @OneToMany(() => Subtitle, (subtitle) => subtitle.episode)
   subtitles = new Collection<Subtitle>(this);
+
+  public get source() {
+    const sources = readdirSync(getDataPath('source'));
+    const episodeRegex = new RegExp(
+      `S0?${this.season.id}E0?${this.idInSeason}`
+    );
+    return sources.find((source) => episodeRegex.test(source));
+  }
 }

@@ -6,6 +6,7 @@ import {
   Property,
 } from '@mikro-orm/core';
 import { SubtitleRepository } from '../repositories';
+import { secondsToTS, tsToSeconds } from '../utils';
 import { Episode } from './episode.entity';
 
 @Entity({ tableName: 'subtitles', customRepository: () => SubtitleRepository })
@@ -41,5 +42,13 @@ export class Subtitle {
       time_end: this.timeEnd,
       text: this.text,
     };
+  }
+
+  public getTimeBegin(offset: number) {
+    return secondsToTS(tsToSeconds(this.timeBegin) + offset);
+  }
+
+  public getTimeEnd(offset: number) {
+    return secondsToTS(tsToSeconds(this.timeEnd) + offset);
   }
 }

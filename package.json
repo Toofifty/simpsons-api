@@ -8,10 +8,13 @@
     "build": "rm -rf dist && tsc",
     "db": "docker-compose up -d",
     "dev": "yarn db && env-cmd nodemon -I --exec node --experimental-specifier-resolution=node --loader ts-node/esm ./src/index.ts",
-    "start": "env-cmd node dist/index.js"
+    "start": "env-cmd node dist/index.js",
+    "mikro": "MIKRO_ORM_DYNAMIC_IMPORTS=1 NODE_OPTIONS=\" --experimental-specifier-resolution=node --loader ts-node/esm\" mikro-orm"
   },
   "dependencies": {
+    "@mikro-orm/cli": "^5.4.2",
     "@mikro-orm/core": "^5.4.2",
+    "@mikro-orm/migrations": "^5.4.2",
     "@mikro-orm/mysql": "^5.4.2",
     "cors": "^2.8.5",
     "express": "^4.17.1",
