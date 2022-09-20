@@ -9,17 +9,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup Node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
-          node-version: "16.13.x"
+          node-version: 16
       - name: Install dependencies
-        uses: borales/actions-yarn@v2.0.0
+        uses: borales/actions-yarn@v3.0.0
         with:
           cmd: install --force
       - name: Build project
-        uses: borales/actions-yarn@v2.0.0
+        uses: borales/actions-yarn@v3.0.0
         with:
           cmd: build
       - name: Upload artifacts
@@ -32,11 +32,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v3
         with:
           name: dist
       - name: Deploy files
-        uses: appleboy/scp-action@v0.0.6
+        uses: appleboy/scp-action@v0.1.3
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Execute pm2 restart
-        uses: appleboy/ssh-action@v0.0.7
+        uses: appleboy/ssh-action@v0.1.5
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
