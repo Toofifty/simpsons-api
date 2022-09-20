@@ -5,6 +5,7 @@ import { orm } from '../orm';
 import { Episode } from '../entities/episode.entity';
 import { Subtitle } from '../entities';
 import { snapService } from './snap.service';
+import type { SNAP_FILE_TYPES } from '../consts';
 
 interface FindQuoteOptions {
   term: string;
@@ -14,6 +15,7 @@ interface FindQuoteOptions {
   seasonEpisode?: number;
   padding?: number;
   snap?: boolean;
+  snapFiletype?: typeof SNAP_FILE_TYPES[number];
 }
 
 const defaultOptions = {
@@ -86,6 +88,7 @@ export const quoteService = {
             seasonId: episode.season.id,
             episodeInSeason: episode.idInSeason,
             time: matchedSubtitles[0]?.timeBegin!,
+            filetype: options.snapFiletype,
           })
         : undefined,
       matches: {
