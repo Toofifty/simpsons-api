@@ -14,6 +14,9 @@ export class Log {
   @Property({ type: 'string' })
   requestPath!: string;
 
+  @Property({ type: 'string', nullable: true })
+  body?: string;
+
   @Property({ type: 'boolean' })
   success!: boolean;
 

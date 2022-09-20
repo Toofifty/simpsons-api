@@ -6,6 +6,7 @@ import {
   snippetService,
   statsService,
 } from './services';
+import { episodeService } from './services/episode.service';
 import { getDataPath, removeEmpty, url } from './utils';
 
 export const router = Router();
@@ -37,11 +38,33 @@ router.get('/', async (_, res) => {
 });
 
 router.get('/logs', async (req, res) => {
-  const [logs, total] = await logService.view(
-    Number(req.query['page']),
-    Number(req.query['perpage'])
-  );
+  const [logs, total] = await logService.viewAll({
+    filter: req.query['filter'],
+    page: Number(req.query['page']),
+    perpage: Number(req.query['perpage']),
+  });
   return json(res, { total, logs });
+});
+
+router.get('/episode', async (_, res) => {
+  return json(res, await episodeService.viewAll());
+});
+
+router.post('/episode/correction', async (req, res) => {
+  try {
+    if (!req.body) {
+      throw 'No body';
+    }
+
+    await episodeService.makeCorrection(req.body['id'], req.body['correction']);
+  } catch (e) {
+    if (typeof e === 'string') return error(res, e, 400);
+    throw e;
+  }
+
+  return json(res, {
+    message: 'Thank you for your correction! This event has been logged :)',
+  });
 });
 
 router.get('/quote', async (req, res) => {

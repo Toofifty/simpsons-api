@@ -40,6 +40,15 @@
           "nullable": false,
           "mappedType": "string"
         },
+        "body": {
+          "name": "body",
+          "type": "varchar(255)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "mappedType": "string"
+        },
         "success": {
           "name": "success",
           "type": "tinyint(1)",

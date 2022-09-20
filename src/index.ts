@@ -1,4 +1,5 @@
 import express from 'express';
+import bodyParser from 'body-parser';
 import http from 'http';
 import cors from 'cors';
 import { existsSync, mkdirSync } from 'fs';
@@ -30,6 +31,7 @@ app.use((req, _, next) => {
   next();
 });
 
+app.use(bodyParser.json());
 app.use(cors());
 
 app.use('/v1', router);
