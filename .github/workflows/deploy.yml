@@ -51,7 +51,6 @@ jobs:
           source: "dist/*,package.json,yarn.lock"
           target: "web/www/simpsons-api"
           overwrite: true
-          strip_components: 1
 
   restart-service:
     needs: [deploy]
