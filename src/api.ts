@@ -130,6 +130,7 @@ SNIPPET_FILE_TYPES.forEach((filetype) => {
             ? Boolean(Number(req.query['subtitles']))
             : filetype === 'gif',
           filetype,
+          resolution: Number(req.query['resolution']),
         })
       );
 

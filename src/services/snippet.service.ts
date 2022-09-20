@@ -23,6 +23,7 @@ interface GenSnippetOptions {
 const defaultOptions = {
   subtitles: true,
   filetype: 'gif',
+  resolution: 240,
 } as const;
 
 export const snippetService = {
@@ -35,6 +36,10 @@ export const snippetService = {
 
     if (!SNIPPET_FILE_TYPES.includes(options.filetype)) {
       throw `Snippet file type not supported: ${options.filetype}`;
+    }
+
+    if (options.resolution < 0 || options.resolution > 720) {
+      throw `Invalid resolution: ${options.resolution}`;
     }
 
     const subtitleRepository = orm.em.getRepository(Subtitle);
@@ -100,6 +105,7 @@ export const snippetService = {
         (options.offset ?? 0) +
         episode.subtitleCorrection / 1000,
       duration,
+      resolution: options.resolution,
       subtitlePath: options.subtitles ? subtitlePath : undefined,
       output: abspath,
     });
@@ -127,10 +133,10 @@ export const snippetService = {
     endSubtitleId: number,
     options: GenSnippetOptions
   ) {
-    return `b${beginSubtitleId}e${endSubtitleId}${
+    return `x${options.resolution}${
       options.subtitles ? 's' : 'ns'
-    }${options.offset ? `~${options.offset}` : ''}${
-      options.extend ? `+${options.extend}` : ''
-    }.${options.filetype}`;
+    }b${beginSubtitleId}e${endSubtitleId}${
+      options.offset ? `~${options.offset}` : ''
+    }${options.extend ? `+${options.extend}` : ''}.${options.filetype}`;
   },
 };

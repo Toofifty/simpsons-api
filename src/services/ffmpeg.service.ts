@@ -8,6 +8,7 @@ interface SaveGifOptions {
   duration: number;
   subtitlePath?: string;
   output: string;
+  resolution: number;
 }
 
 interface SaveSnapOptions {
@@ -23,6 +24,7 @@ export const ffmpegService = {
     offset,
     subtitlePath,
     output,
+    resolution,
   }: SaveGifOptions) {
     return new Promise<number>((res, rej) => {
       const start = Date.now();
@@ -33,7 +35,7 @@ export const ffmpegService = {
         .on('error', rej)
         .videoFilters([
           'fps=24',
-          'scale=720:-1:flags=lanczos',
+          `scale=${resolution}:-1:flags=lanczos`,
           ...(subtitlePath
             ? [`subtitles=${subtitlePath}:force_style='FontSize=24'`]
             : []),
