@@ -39,7 +39,7 @@ router.get('/', async (_, res) => {
 
 router.get('/logs', async (req, res) => {
   const [logs, total] = await logService.viewAll({
-    filter: req.query['filter'],
+    filter: req.query['filter']?.toString(),
     page: Number(req.query['page']),
     perpage: Number(req.query['perpage']),
   });
