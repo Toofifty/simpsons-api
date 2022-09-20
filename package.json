@@ -3,12 +3,11 @@
   "version": "1.0.0",
   "main": "dist/index.js",
   "license": "MIT",
-  "type": "module",
   "scripts": {
     "build": "rm -rf dist && tsc",
     "db": "docker-compose up -d",
-    "dev": "yarn db && env-cmd nodemon -I --exec node --experimental-specifier-resolution=node --loader ts-node/esm ./src/index.ts",
-    "start": "env-cmd node --experimental-specifier-resolution=node dist/index.js",
+    "dev": "yarn db && env-cmd nodemon -I --exec ts-node ./src/index.ts",
+    "start": "env-cmd node dist/index.js",
     "mikro": "MIKRO_ORM_DYNAMIC_IMPORTS=1 NODE_OPTIONS=\" --experimental-specifier-resolution=node --loader ts-node/esm\" mikro-orm"
   },
   "dependencies": {

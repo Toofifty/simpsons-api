@@ -8,6 +8,8 @@
   "compilerOptions": {
     "exactOptionalPropertyTypes": false,
     "experimentalDecorators": true,
-    "outDir": "dist"
+    "outDir": "dist",
+    "target": "es2015",
+    "module": "commonjs"
   }
 }
