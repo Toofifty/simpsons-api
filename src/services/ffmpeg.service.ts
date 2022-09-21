@@ -40,6 +40,7 @@ export const ffmpegService = {
             ? [`subtitles=${subtitlePath}:force_style='FontSize=24'`]
             : []),
         ])
+        .outputOptions(['-movflags +faststart', '-strict -2'])
         .save(output);
     });
   },
