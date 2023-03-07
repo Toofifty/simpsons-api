@@ -89,6 +89,25 @@ router.get('/quote', async (req, res) => {
   );
 });
 
+router.get('/search', async (req, res) => {
+  if (!req.query['term']) {
+    return error(res, '`term` field is required', 422);
+  }
+  try {
+    return json(
+      res,
+      await quoteService.search(
+        removeEmpty({
+          term: req.query['term'].toString(),
+        })
+      )
+    );
+  } catch (e) {
+    if (typeof e === 'string') return error(res, e, 400);
+    throw e;
+  }
+});
+
 SNIPPET_FILE_TYPES.forEach((filetype) => {
   router.get(`/${filetype}`, async (req, res) => {
     if (req.query['term']) {

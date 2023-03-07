@@ -7,6 +7,7 @@ interface SearchEpisodeOptions {
   season?: number;
   episode?: number;
   seasonEpisode?: number;
+  limit?: number;
 }
 
 export class EpisodeRepository extends EntityRepository<Episode> {
@@ -16,6 +17,7 @@ export class EpisodeRepository extends EntityRepository<Episode> {
     seasonEpisode,
     episode,
     match,
+    limit = 1,
   }: SearchEpisodeOptions) {
     return this.findAndCount(
       { subtitleIndex: { $like: `%${term}%` } },
@@ -25,7 +27,7 @@ export class EpisodeRepository extends EntityRepository<Episode> {
           idInSeason: seasonEpisode ? { idInSeason: seasonEpisode } : false,
           id: episode ? { id: episode } : false,
         },
-        limit: 1,
+        limit,
         offset: match,
         populate: ['season'],
       }

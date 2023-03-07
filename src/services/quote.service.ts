@@ -5,7 +5,11 @@ import { orm } from '../orm';
 import { Episode } from '../entities/episode.entity';
 import { Subtitle } from '../entities';
 import { snapService } from './snap.service';
-import type { SNAP_FILE_TYPES } from '../consts';
+import {
+  MAX_EPISODE_MATCH_LIMIT,
+  MIN_TERM_LENGTH,
+  SNAP_FILE_TYPES,
+} from '../consts';
 
 interface FindQuoteOptions {
   term: string;
@@ -16,6 +20,10 @@ interface FindQuoteOptions {
   padding?: number;
   snap?: boolean;
   snapFiletype?: typeof SNAP_FILE_TYPES[number];
+}
+
+interface SearchQuoteOptions {
+  term: string;
 }
 
 const defaultOptions = {
@@ -54,12 +62,12 @@ export const quoteService = {
 
     const previousSubtitles = await subtitleRepository.findPrevious({
       limit: options.padding,
-      maxId: Math.max(...matchedIds),
+      maxId: Math.min(...matchedIds),
     });
 
     const nextSubtitles = await subtitleRepository.findNext({
       limit: options.padding,
-      minId: Math.min(...matchedIds),
+      minId: Math.max(...matchedIds),
     });
 
     return {
@@ -92,28 +100,106 @@ export const quoteService = {
           })
         : undefined,
       matches: {
-        lines: matchedSubtitles.map((subtitle) => subtitle.normalize()),
         before: previousSubtitles.map((subtitle) => subtitle.normalize()),
+        lines: matchedSubtitles.map((subtitle) => subtitle.normalize()),
         after: nextSubtitles.map((subtitle) => subtitle.normalize()),
       },
     };
   },
 
-  findIndices(episode: Episode, term: string) {
+  findIndices(episode: Episode, term: string, after: number = 0) {
     const parts = term.split('%');
+    const subtitleIndex = episode.subtitleIndex.slice(after);
 
     if (parts.length === 1) {
-      const index = episode.subtitleIndex.indexOf(term);
-      return [index, index + term.length] as const;
+      const index = subtitleIndex.indexOf(term);
+      if (index === -1) {
+        return [-1, -1];
+      }
+      return [after + index, after + index + term.length] as const;
     }
 
     const first = parts[0]!;
     const last = parts[parts.length - 1]!;
-    const index = episode.subtitleIndex.indexOf(first);
-    return [
-      index,
-      index + episode.subtitleIndex.slice(index).indexOf(last) + last.length,
-    ] as const;
+    const index = subtitleIndex.indexOf(first);
+    const endIndex = subtitleIndex.slice(index).indexOf(last);
+    if (index === -1 || endIndex === -1) {
+      return [-1, -1];
+    }
+    return [after + index, after + index + endIndex + last.length] as const;
+  },
+
+  async search(rawOptions: SearchQuoteOptions) {
+    const episodeRepository = orm.em.getRepository(Episode);
+    const subtitleRepository = orm.em.getRepository(Subtitle);
+
+    const term = rawOptions.term.split('[...]').map(normalizeTerm).join('%');
+
+    if (term.length < MIN_TERM_LENGTH) {
+      throw `Minimum search length is ${MIN_TERM_LENGTH} characters`;
+    }
+
+    const [episodes, totalMatches] = await episodeRepository.search({
+      term,
+      match: 0,
+      limit: MAX_EPISODE_MATCH_LIMIT,
+    });
+
+    if (totalMatches === 0) {
+      return { total_results: 0, matches: [] };
+    }
+
+    const resolveMatches = episodes.map(async (episode) => {
+      const episodeMatches = [];
+      let [beginIndex, endIndex] = this.findIndices(episode, term);
+
+      while (beginIndex > -1 && endIndex > -1) {
+        const matchedSubtitles = await subtitleRepository.findMatchedSubtitles({
+          episodeId: episode.id,
+          beginIndex,
+          endIndex,
+        });
+
+        const matchedIds = matchedSubtitles.map(({ id }) => id);
+
+        const previousSubtitles = await subtitleRepository.findPrevious({
+          limit: 1,
+          maxId: Math.min(...matchedIds),
+        });
+
+        const nextSubtitles = await subtitleRepository.findNext({
+          limit: 1,
+          minId: Math.max(...matchedIds),
+        });
+
+        episodeMatches.push({
+          meta: {
+            season_number: episode.season.id,
+            season_title: episode.season.title,
+            episode_title: episode.title,
+            episode_number: episode.id,
+            episode_in_season: episode.idInSeason,
+          },
+          before: previousSubtitles.map((subtitle) => subtitle.normalize()),
+          lines: matchedSubtitles.map((subtitle) => subtitle.normalize()),
+          after: nextSubtitles.map((subtitle) => subtitle.normalize()),
+        });
+
+        // use the old endIndex as the starting point for the next search
+        [beginIndex, endIndex] = this.findIndices(episode, term, endIndex);
+      }
+
+      return episodeMatches;
+    });
+
+    const matches = (await Promise.all(resolveMatches)).flat();
+
+    matches.sort((a, b) => a.lines[0]!.id - b.lines[0]!.id);
+
+    return {
+      total_results: matches.length,
+      matches,
+    };
   },
 
   getUrl(options: FindQuoteOptions) {
