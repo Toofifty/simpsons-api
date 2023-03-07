@@ -22,6 +22,12 @@ interface FindQuoteOptions {
   snapFiletype?: typeof SNAP_FILE_TYPES[number];
 }
 
+interface QuoteInfoOptions {
+  begin: number;
+  end: number;
+  padding?: number;
+}
+
 interface SearchQuoteOptions {
   term: string;
 }
@@ -107,26 +113,43 @@ export const quoteService = {
     };
   },
 
-  findIndices(episode: Episode, term: string, after: number = 0) {
-    const parts = term.split('%');
-    const subtitleIndex = episode.subtitleIndex.slice(after);
+  async findContext({ begin, end, padding = 5 }: QuoteInfoOptions) {
+    const subtitleRepository = orm.em.getRepository(Subtitle);
 
-    if (parts.length === 1) {
-      const index = subtitleIndex.indexOf(term);
-      if (index === -1) {
-        return [-1, -1];
-      }
-      return [after + index, after + index + term.length] as const;
+    const subtitles = await subtitleRepository.find({
+      id: { $gte: begin, $lte: end },
+    });
+
+    if (subtitles.length === 0) {
+      throw `No subtitles found for range ${begin} - ${end}`;
     }
 
-    const first = parts[0]!;
-    const last = parts[parts.length - 1]!;
-    const index = subtitleIndex.indexOf(first);
-    const endIndex = subtitleIndex.slice(index).indexOf(last);
-    if (index === -1 || endIndex === -1) {
-      return [-1, -1];
-    }
-    return [after + index, after + index + endIndex + last.length] as const;
+    const episode = await subtitles[0]!.episode.load();
+
+    const previousSubtitles = await subtitleRepository.findPrevious({
+      limit: padding,
+      maxId: begin,
+    });
+
+    const nextSubtitles = await subtitleRepository.findNext({
+      limit: padding,
+      minId: end,
+    });
+
+    return {
+      meta: {
+        season_number: episode.season.id,
+        season_title: episode.season.title,
+        episode_title: episode.title,
+        episode_number: episode.id,
+        episode_in_season: episode.idInSeason,
+      },
+      matches: {
+        before: previousSubtitles.map((subtitle) => subtitle.normalize()),
+        lines: subtitles.map((subtitle) => subtitle.normalize()),
+        after: nextSubtitles.map((subtitle) => subtitle.normalize()),
+      },
+    };
   },
 
   async search(rawOptions: SearchQuoteOptions) {
@@ -200,6 +223,28 @@ export const quoteService = {
       total_results: matches.length,
       matches,
     };
+  },
+
+  findIndices(episode: Episode, term: string, after: number = 0) {
+    const parts = term.split('%');
+    const subtitleIndex = episode.subtitleIndex.slice(after);
+
+    if (parts.length === 1) {
+      const index = subtitleIndex.indexOf(term);
+      if (index === -1) {
+        return [-1, -1];
+      }
+      return [after + index, after + index + term.length] as const;
+    }
+
+    const first = parts[0]!;
+    const last = parts[parts.length - 1]!;
+    const index = subtitleIndex.indexOf(first);
+    const endIndex = subtitleIndex.slice(index).indexOf(last);
+    if (index === -1 || endIndex === -1) {
+      return [-1, -1];
+    }
+    return [after + index, after + index + endIndex + last.length] as const;
   },
 
   getUrl(options: FindQuoteOptions) {

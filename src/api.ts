@@ -89,6 +89,27 @@ router.get('/quote', async (req, res) => {
   );
 });
 
+router.get('/context', async (req, res) => {
+  if (!req.query['begin']) {
+    return error(res, 'either `term` or `begin` field is required', 422);
+  }
+
+  if (!req.query['end']) {
+    return error(res, 'either `term` or `end` field is required', 422);
+  }
+
+  return json(
+    res,
+    await quoteService.findContext(
+      removeEmpty({
+        begin: Number(req.query['begin']),
+        end: Number(req.query['end']),
+        padding: Number(req.query['padding']),
+      })
+    )
+  );
+});
+
 router.get('/search', async (req, res) => {
   if (!req.query['term']) {
     return error(res, '`term` field is required', 422);

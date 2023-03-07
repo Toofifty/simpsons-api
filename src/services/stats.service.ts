@@ -1,5 +1,5 @@
 import { readdirSync } from 'fs';
-import { Episode, Season, Subtitle } from '../entities';
+import { Episode, Subtitle } from '../entities';
 import { orm } from '../orm';
 import { getDataPath } from '../utils';
 
@@ -8,12 +8,17 @@ const FILE_TYPES = ['jpg', 'mp4', 'gif'];
 export const statsService = {
   async getAll() {
     const episodeRepository = orm.em.getRepository(Episode);
-    const seasonRepository = orm.em.getRepository(Season);
     const subtitleRepository = orm.em.getRepository(Subtitle);
 
     return {
       episodes_indexed: await episodeRepository.count(),
-      seasons_indexed: await seasonRepository.count(),
+      seasons_indexed: (
+        await episodeRepository
+          .qb()
+          .orderBy({ season: 'desc' })
+          .limit(1)
+          .execute()
+      )[0].season,
       subtitles_indexed: await subtitleRepository.count(),
       ...FILE_TYPES.reduce(
         (prev, type) => ({
