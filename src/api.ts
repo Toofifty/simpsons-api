@@ -56,14 +56,20 @@ router.post('/episode/correction', async (req, res) => {
       throw 'No body';
     }
 
+    if (req.body['passcode'] !== process.env['PASSCODE']) {
+      throw 'Invalid passcode';
+    }
+
     await episodeService.makeCorrection(req.body['id'], req.body['correction']);
+    await episodeService.purgeSnippets(req.body['id']);
   } catch (e) {
     if (typeof e === 'string') return error(res, e, 400);
     throw e;
   }
 
   return json(res, {
-    message: 'Thank you for your correction! This event has been logged :)',
+    message:
+      'Correction applied, and existing episode snippets have been purged',
   });
 });
 
@@ -157,22 +163,23 @@ SNIPPET_FILE_TYPES.forEach((filetype) => {
     }
 
     try {
-      const { filepath, renderTime } = await snippetService.generate(
-        Number(req.query['begin']),
-        Number(req.query['end']),
-        removeEmpty({
-          offset: Number(req.query['offset']),
-          extend: Number(req.query['extend']),
-          // if subtitles value is set, always use it
-          // otherwise default to showing subtitles only
-          // for gifs
-          subtitles: req.query['subtitles']
-            ? Boolean(Number(req.query['subtitles']))
-            : filetype === 'gif',
-          filetype,
-          resolution: Number(req.query['resolution']),
-        })
-      );
+      const { filepath, renderTime, subtitleCorrection } =
+        await snippetService.generate(
+          Number(req.query['begin']),
+          Number(req.query['end']),
+          removeEmpty({
+            offset: Number(req.query['offset']),
+            extend: Number(req.query['extend']),
+            // if subtitles value is set, always use it
+            // otherwise default to showing subtitles only
+            // for gifs
+            subtitles: req.query['subtitles']
+              ? Boolean(Number(req.query['subtitles']))
+              : filetype === 'gif',
+            filetype,
+            resolution: Number(req.query['resolution']),
+          })
+        );
 
       if (req.query['render']) {
         return res.sendFile(getDataPath(filepath));
@@ -181,6 +188,7 @@ SNIPPET_FILE_TYPES.forEach((filetype) => {
       return json(res, {
         url: url(filepath),
         render_time: renderTime,
+        subtitle_correction: subtitleCorrection,
         cached: !renderTime,
       });
     } catch (e) {

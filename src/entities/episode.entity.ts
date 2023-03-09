@@ -48,4 +48,8 @@ export class Episode {
     );
     return sources.find((source) => episodeRegex.test(source));
   }
+
+  public get identifier() {
+    return `s${this.season.id.toString().padStart(2, '0')}e${this.idInSeason}`;
+  }
 }

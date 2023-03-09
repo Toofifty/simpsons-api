@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from 'fs';
+import { existsSync, promises } from 'fs';
 import { SNAP_FILE_TYPES } from '../consts';
 import { getDataPath, url } from '../utils';
 import { ffmpegService } from './ffmpeg.service';
@@ -24,7 +24,7 @@ export const snapService = {
     const filename = this.getName(seasonId, episodeInSeason, time, filetype);
 
     if (!existsSync(getDataPath(filetype, filename))) {
-      const sources = readdirSync(getDataPath('source'));
+      const sources = await promises.readdir(getDataPath('source'));
       const episodeRegex = new RegExp(`S0?${seasonId}E0?${episodeInSeason}`);
       const source = sources.find((source) => episodeRegex.test(source));
 

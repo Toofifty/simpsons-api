@@ -1,4 +1,4 @@
-import { existsSync, writeFileSync } from 'fs';
+import { existsSync, promises } from 'fs';
 
 import { config } from '../utils';
 import { Subtitle } from '../entities';
@@ -44,12 +44,6 @@ export const snippetService = {
 
     const subtitleRepository = orm.em.getRepository(Subtitle);
     const filename = this.getName(beginSubtitleId, endSubtitleId, options);
-    const filepath = join(options.filetype, filename);
-    const abspath = getDataPath(filepath);
-
-    if (config('USE_CACHE') && existsSync(abspath)) {
-      return { filepath, renderTime: 0 };
-    }
 
     const subtitles = await subtitleRepository.find({
       id: { $gte: beginSubtitleId, $lte: endSubtitleId },
@@ -69,11 +63,28 @@ export const snippetService = {
       throw `Cannot create ${options.filetype} from multiple episodes`;
     }
 
-    const episode = (await subtitles[0]?.episode.load())!;
-    const source = episode.source;
+    const episode = (await subtitles[0]!.episode.load())!;
 
+    const source = episode.source;
     if (!source) {
       throw 'Episode not available';
+    }
+
+    const episodePath = getDataPath(options.filetype, episode.identifier);
+    const filepath = join(options.filetype, episode.identifier, filename);
+
+    if (!existsSync(episodePath)) {
+      await promises.mkdir(episodePath, { recursive: true });
+    }
+
+    const abspath = getDataPath(filepath);
+
+    if (config('USE_CACHE') && existsSync(abspath)) {
+      return {
+        filepath,
+        renderTime: 0,
+        subtitleCorrection: episode.subtitleCorrection / 1000,
+      };
     }
 
     const [first, last] = ends(subtitles);
@@ -85,7 +96,7 @@ export const snippetService = {
       `b${beginSubtitleId}e${endSubtitleId}.vtt`
     );
 
-    writeFileSync(subtitlePath, vtt);
+    await promises.writeFile(subtitlePath, vtt);
 
     const duration =
       (options.extend ?? 0) +
@@ -97,6 +108,12 @@ export const snippetService = {
         MAX_SNIPPET_DURATION / 1000
       } seconds: ${Math.floor(duration)}s`;
     }
+
+    console.log(
+      tsToSeconds(first.timeBegin),
+      options.offset ?? 0,
+      episode.subtitleCorrection / 1000
+    );
 
     const renderTime = await ffmpegService.saveSnippet({
       source,
@@ -110,7 +127,11 @@ export const snippetService = {
       output: abspath,
     });
 
-    return { filepath, renderTime };
+    return {
+      filepath,
+      renderTime,
+      subtitleCorrection: episode.subtitleCorrection / 1000,
+    };
   },
 
   async createVTT(subtitles: Subtitle[], offset: number) {

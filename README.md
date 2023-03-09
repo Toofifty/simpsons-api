@@ -51,12 +51,12 @@ Generate a gif of the quote matching the search criteria. Supports seasons 1-19.
 
 Episode subtitles are indexed by removing all punctuation and spaces, then by combining all subtitles in an episode into one database column to be used as the index. Because of this, there is no need to add punctuation or spaces to search terms. 
 
-The term [`get ready, everybody. He`](`https://simpsons-api.matho.me/gif?term=get%20ready,%20everybody.%20He`) is equivalent to [`getreadyeverybodyhe`](https://simpsons-api.matho.me/gif?term=getreadyeverybodyhe).
+The term [`get ready, everybody. He`](`https://simpsons-api.matho.me/v1/gif?term=get%20ready,%20everybody.%20He`) is equivalent to [`getreadyeverybodyhe`](https://simpsons-api.matho.me/v1/gif?term=getreadyeverybodyhe).
 
-![getreadyeverybodyhe](https://simpsons-api.matho.me/gifs/b104705e104706.gif)
+![getreadyeverybodyhe](https://simpsons-api.matho.me/gif/x240sb104705e104706.gif)
 
 Gaps can also be specified by adding `[...]` between search terms. This allows for searching across multiple different subtitles without having to specify quotes perfectly.
 
-[`alongthelinesof[...]makehomer[...]dontmind`](https://simpsons-api.matho.me/gif?term=alongthelinesof%5B...%5Dmakehomer%5B...%5Ddontmind)
+[`alongthelinesof[...]makehomer[...]dontmind`](https://simpsons-api.matho.me/v1/gif?term=alongthelinesof[...]makehomer[...]dontmind)
 
-![alongthelinesof[...]makehomer[...]dontmind](https://simpsons-api.matho.me/gifs/b51637e51640.gif)
+![alongthelinesof[...]makehomer[...]dontmind](https://simpsons-api.matho.me/gif/x240sb51637e51640.gif)

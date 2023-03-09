@@ -85,6 +85,7 @@ export const quoteService = {
         episode_title: episode.title,
         episode_number: episode.id,
         episode_in_season: episode.idInSeason,
+        subtitle_correction: episode.subtitleCorrection,
       },
       links: {
         ...(options.match > 0 && {
@@ -143,6 +144,7 @@ export const quoteService = {
         episode_title: episode.title,
         episode_number: episode.id,
         episode_in_season: episode.idInSeason,
+        subtitle_correction: episode.subtitleCorrection,
       },
       matches: {
         before: previousSubtitles.map((subtitle) => subtitle.normalize()),

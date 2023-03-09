@@ -6,3 +6,4 @@ export * from './config';
 export * from './time';
 export * from './url';
 export * from './error';
+export * from './sum';

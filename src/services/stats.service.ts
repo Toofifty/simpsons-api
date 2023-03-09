@@ -1,7 +1,7 @@
 import { readdirSync } from 'fs';
 import { Episode, Subtitle } from '../entities';
 import { orm } from '../orm';
-import { getDataPath } from '../utils';
+import { getDataPath, sum } from '../utils';
 
 const FILE_TYPES = ['jpg', 'mp4', 'gif'];
 
@@ -23,7 +23,15 @@ export const statsService = {
       ...FILE_TYPES.reduce(
         (prev, type) => ({
           ...prev,
-          [`${type}s_generated`]: readdirSync(getDataPath(type)).length,
+          [`${type}s_generated`]: sum(
+            ...readdirSync(getDataPath(type)).flatMap((file) => {
+              try {
+                return readdirSync(getDataPath(type, file)).length;
+              } catch {
+                return 1;
+              }
+            })
+          ),
         }),
         {}
       ),
