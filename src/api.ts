@@ -216,6 +216,7 @@ SNIPPET_FILE_TYPES.forEach((filetype) => {
 
       return json(res, {
         uuid: snippet.uuid,
+        published: snippet.published,
         url: url(snippet.filepath),
         render_time: renderTime,
         subtitle_correction: subtitleCorrection,
