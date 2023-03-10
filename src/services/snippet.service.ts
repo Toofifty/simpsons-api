@@ -5,7 +5,6 @@ import { Subtitle } from '../entities';
 import { orm } from '../orm';
 import { ends, getDataPath, tsToSeconds } from '../utils';
 import { ffmpegService } from './ffmpeg.service';
-import { snapService } from './snap.service';
 import { join } from 'path';
 import {
   MAX_SNIPPET_DURATION,
