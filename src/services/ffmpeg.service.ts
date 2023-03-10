@@ -13,7 +13,7 @@ interface SaveGifOptions {
 
 interface SaveSnapOptions {
   source: string;
-  offset: string;
+  offset: number;
   output: string;
 }
 

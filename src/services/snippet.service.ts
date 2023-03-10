@@ -5,6 +5,7 @@ import { Subtitle } from '../entities';
 import { orm } from '../orm';
 import { ends, getDataPath, tsToSeconds } from '../utils';
 import { ffmpegService } from './ffmpeg.service';
+import { snapService } from './snap.service';
 import { join } from 'path';
 import {
   MAX_SNIPPET_DURATION,
@@ -138,11 +139,33 @@ export const snippetService = {
       output: abspath,
     });
 
+    const episodeSnapPath = getDataPath('jpg', episode.identifier);
+
+    if (!existsSync(episodeSnapPath)) {
+      await promises.mkdir(episodeSnapPath, { recursive: true });
+    }
+
+    const snapshot = join(
+      'jpg',
+      episode.identifier,
+      filename.replace(/\.[^.]+$/, '.jpg')
+    );
+
+    const snapTime = await ffmpegService.saveSnap({
+      source,
+      offset:
+        tsToSeconds(first.timeBegin) +
+        (options.offset ?? 0) +
+        episode.subtitleCorrection / 1000,
+      output: getDataPath(snapshot),
+    });
+
     const snippet = await snippetRepository.upsert(
       { filepath },
       {
         episode,
         filepath,
+        snapshot,
         options,
         subtitles,
         views: (existingSnippet?.views ?? 0) + 1,
@@ -155,6 +178,7 @@ export const snippetService = {
     return {
       snippet,
       renderTime,
+      snapRenderTime: snapTime,
       subtitleCorrection: episode.subtitleCorrection / 1000,
     };
   },
@@ -210,9 +234,10 @@ export const snippetService = {
         }
       );
 
-    const results = rawResults.map(({ filepath, ...snippet }) => ({
+    const results = rawResults.map(({ filepath, snapshot, ...snippet }) => ({
       ...snippet,
       url: url(filepath),
+      snapshot: url(snapshot),
       subtitles: snippet.subtitles.getItems().map((subtitle) => ({
         id: subtitle.id,
         text: subtitle.text,

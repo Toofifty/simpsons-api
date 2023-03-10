@@ -1,6 +1,6 @@
 import { URL } from 'url';
 
-import { url, normalizeTerm } from '../utils';
+import { url, normalizeTerm, tsToSeconds } from '../utils';
 import { orm } from '../orm';
 import { Episode } from '../entities/episode.entity';
 import { Subtitle } from '../entities';
@@ -102,7 +102,7 @@ export const quoteService = {
         ? await snapService.generate({
             seasonId: episode.season.id,
             episodeInSeason: episode.idInSeason,
-            time: matchedSubtitles[0]?.timeBegin!,
+            time: tsToSeconds(matchedSubtitles[0]?.timeBegin!),
             filetype: options.snapFiletype,
           })
         : undefined,

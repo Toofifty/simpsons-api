@@ -27,6 +27,9 @@ export class Snippet {
   @Property({ type: 'string', index: true })
   filepath!: string;
 
+  @Property({ type: 'string' })
+  snapshot!: string;
+
   @Property({ type: 'boolean', index: true })
   published: boolean = false;
 

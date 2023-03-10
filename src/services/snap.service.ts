@@ -6,7 +6,7 @@ import { ffmpegService } from './ffmpeg.service';
 interface GenerateSnapOptions {
   seasonId: number;
   episodeInSeason: number;
-  time: string;
+  time: number;
   filetype?: typeof SNAP_FILE_TYPES[number];
 }
 
@@ -43,12 +43,9 @@ export const snapService = {
   getName(
     seasonId: number,
     episodeInSeason: number,
-    time: string,
+    time: number,
     filetype: string
   ) {
-    return `s${seasonId}e${episodeInSeason}t${time.replace(
-      /\W/g,
-      '_'
-    )}.${filetype}`;
+    return `s${seasonId}e${episodeInSeason}t${time}.${filetype}`;
   },
 };
