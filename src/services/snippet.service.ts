@@ -1,6 +1,6 @@
 import { existsSync, promises } from 'fs';
 
-import { config } from '../utils';
+import { config, url } from '../utils';
 import { Subtitle } from '../entities';
 import { orm } from '../orm';
 import { ends, getDataPath, tsToSeconds } from '../utils';
@@ -210,8 +210,9 @@ export const snippetService = {
         }
       );
 
-    const results = rawResults.map((snippet) => ({
+    const results = rawResults.map(({ filepath, ...snippet }) => ({
       ...snippet,
+      url: url(filepath),
       subtitles: snippet.subtitles.getItems().map((subtitle) => ({
         id: subtitle.id,
         text: subtitle.text,
