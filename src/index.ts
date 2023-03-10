@@ -19,7 +19,7 @@ const server = http.createServer(app);
   const path = getDataPath(type);
   if (!existsSync(path)) mkdirSync(path);
 
-  app.use(`/${type}`, express.static(path));
+  app.use(`/${type}`, cors(), express.static(path));
 });
 
 app.use((_, __, next) => {

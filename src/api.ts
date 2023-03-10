@@ -173,6 +173,7 @@ SNIPPET_FILE_TYPES.forEach((filetype) => {
           match: Number(req.query['match']),
         })
       );
+
       if (data.matches) {
         const first = data.matches.lines[0]!;
         const last = data.matches.lines[data.matches.lines.length - 1]!;
