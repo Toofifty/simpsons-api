@@ -4,3 +4,4 @@ export * from './quote.service';
 export * from './snap.service';
 export * from './snippet.service';
 export * from './stats.service';
+export * from './episode.service';

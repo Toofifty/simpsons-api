@@ -11,6 +11,9 @@ import {
   MAX_SUBTITLE_LENGTH,
   SNIPPET_FILE_TYPES,
 } from '../consts';
+import type { SnippetOptions } from '../types';
+import { Snippet } from '../entities/snippet.entity';
+import type { ObjectQuery } from '@mikro-orm/core';
 
 interface GenSnippetOptions {
   subtitles?: boolean;
@@ -18,6 +21,14 @@ interface GenSnippetOptions {
   extend?: number;
   filetype?: typeof SNIPPET_FILE_TYPES[number];
   resolution?: number;
+}
+
+interface FindAllSnippetsOptions {
+  sort_by?: 'created_at' | 'views' | 'episode_id';
+  order?: 'asc' | 'desc';
+  filter_by?: ObjectQuery<Snippet>;
+  limit?: number;
+  offset?: number;
 }
 
 const defaultOptions = {
@@ -32,6 +43,9 @@ export const snippetService = {
     endSubtitleId: number,
     rawOptions: GenSnippetOptions = {}
   ) {
+    const subtitleRepository = orm.em.getRepository(Subtitle);
+    const snippetRepository = orm.em.getRepository(Snippet);
+
     const options = { ...defaultOptions, ...rawOptions };
 
     if (!SNIPPET_FILE_TYPES.includes(options.filetype)) {
@@ -42,7 +56,6 @@ export const snippetService = {
       throw `Invalid resolution: ${options.resolution}`;
     }
 
-    const subtitleRepository = orm.em.getRepository(Subtitle);
     const filename = this.getName(beginSubtitleId, endSubtitleId, options);
 
     const subtitles = await subtitleRepository.find({
@@ -78,10 +91,14 @@ export const snippetService = {
     }
 
     const abspath = getDataPath(filepath);
+    const existingSnippet = await snippetRepository.findOne({ filepath });
 
-    if (config('USE_CACHE') && existsSync(abspath)) {
+    if (config('USE_CACHE') && existsSync(abspath) && existingSnippet) {
+      existingSnippet.views++;
+      await snippetRepository.persistAndFlush(existingSnippet);
+
       return {
-        filepath,
+        snippet: existingSnippet,
         renderTime: 0,
         subtitleCorrection: episode.subtitleCorrection / 1000,
       };
@@ -109,12 +126,6 @@ export const snippetService = {
       } seconds: ${Math.floor(duration)}s`;
     }
 
-    console.log(
-      tsToSeconds(first.timeBegin),
-      options.offset ?? 0,
-      episode.subtitleCorrection / 1000
-    );
-
     const renderTime = await ffmpegService.saveSnippet({
       source,
       offset:
@@ -127,8 +138,22 @@ export const snippetService = {
       output: abspath,
     });
 
+    const snippet = await snippetRepository.upsert(
+      { filepath },
+      {
+        episode,
+        filepath,
+        options,
+        subtitles,
+        views: (existingSnippet?.views ?? 0) + 1,
+        published: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+    );
+
     return {
-      filepath,
+      snippet,
       renderTime,
       subtitleCorrection: episode.subtitleCorrection / 1000,
     };
@@ -159,5 +184,40 @@ export const snippetService = {
     }b${beginSubtitleId}e${endSubtitleId}${
       options.offset ? `~${options.offset}` : ''
     }${options.extend ? `+${options.extend}` : ''}.${options.filetype}`;
+  },
+
+  async publish(options: SnippetOptions) {
+    const { snippet } = await this.generate(
+      options.begin,
+      options.end,
+      options
+    );
+
+    snippet.published = true;
+    await orm.em.persistAndFlush(snippet);
+  },
+
+  async findAll(options: FindAllSnippetsOptions) {
+    const [rawResults, count] = await orm.em
+      .getRepository(Snippet)
+      .findAndCount(
+        { ...(options.filter_by ?? {}), published: true },
+        {
+          orderBy: { [options.sort_by ?? 'views']: options.order ?? 'desc' },
+          populate: ['subtitles'],
+          limit: options.limit && options.limit < 100 ? options.limit : 10,
+          offset: options.offset ?? 0,
+        }
+      );
+
+    const results = rawResults.map((snippet) => ({
+      ...snippet,
+      subtitles: snippet.subtitles.getItems().map((subtitle) => ({
+        id: subtitle.id,
+        text: subtitle.text,
+      })),
+    }));
+
+    return { results, count };
   },
 };

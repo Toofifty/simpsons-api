@@ -1,7 +1,9 @@
 import {
+  Collection,
   Entity,
   EntityRepositoryType,
   IdentifiedReference,
+  ManyToMany,
   ManyToOne,
   PrimaryKey,
   Property,
@@ -9,6 +11,7 @@ import {
 import { SubtitleRepository } from '../repositories';
 import { secondsToTS, tsToSeconds } from '../utils';
 import { Episode } from './episode.entity';
+import { Snippet } from './snippet.entity';
 
 @Entity({ tableName: 'subtitles', customRepository: () => SubtitleRepository })
 export class Subtitle {
@@ -34,6 +37,9 @@ export class Subtitle {
 
   @Property({ type: 'number' })
   indexEnd!: number;
+
+  @ManyToMany(() => Snippet, (published) => published.subtitles)
+  published: Collection<Snippet> = new Collection<Snippet>(this);
 
   public normalize() {
     return {

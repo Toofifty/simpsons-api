@@ -7,7 +7,7 @@ import { getDataPath } from '../utils';
 const MAX_CORRECTION = 600;
 
 export const episodeService = {
-  viewAll: async () => {
+  findAll: async () => {
     return orm.em
       .getRepository(Episode)
       .findAll({ fields: ['id', 'idInSeason', 'title', 'subtitleCorrection'] });
@@ -30,6 +30,8 @@ export const episodeService = {
 
     episode.subtitleCorrection = correction;
     await episodeRepository.persistAndFlush(episode);
+
+    // TODO: apply correction to all snippets of the episode
   },
 
   purgeSnippets: async (id: number) => {

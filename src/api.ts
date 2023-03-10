@@ -1,13 +1,15 @@
 import { Response, Router } from 'express';
+import { unflatten } from 'flat';
 import { SNIPPET_FILE_TYPES } from './consts';
 import {
+  episodeService,
   logService,
   quoteService,
   snippetService,
   statsService,
 } from './services';
-import { episodeService } from './services/episode.service';
 import { getDataPath, removeEmpty, url } from './utils';
+import validators from './validators';
 
 export const router = Router();
 
@@ -22,7 +24,7 @@ const json = (res: Response, data: Record<string, any>) => {
   });
 };
 
-const error = (res: Response, message: string, status = 500) => {
+const error = (res: Response, message: string | object, status = 500) => {
   const responseTime = Date.now() - (res.req as any).start;
   logService.logRequest(res, status, responseTime);
 
@@ -47,7 +49,7 @@ router.get('/logs', async (req, res) => {
 });
 
 router.get('/episode', async (_, res) => {
-  return json(res, await episodeService.viewAll());
+  return json(res, await episodeService.findAll());
 });
 
 router.post('/episode/correction', async (req, res) => {
@@ -135,6 +137,57 @@ router.get('/search', async (req, res) => {
   }
 });
 
+router.get('/snippets', async (req, res) => {
+  const result = validators.snippets.findAll.safeParse(unflatten(req.query));
+
+  if (!result.success) {
+    return error(res, result.error.flatten(), 422);
+  }
+
+  const data = await snippetService.findAll(result.data);
+
+  return json(res, data);
+});
+
+router.post('/snippets/publish', async (req, res) => {
+  if (!req.body['begin']) {
+    return error(res, '`begin` field is required', 422);
+  }
+
+  if (!req.body['end']) {
+    return error(res, '`end` field is required', 422);
+  }
+
+  if (!['gif', 'mp4'].includes(req.body['filetype']?.toString())) {
+    return error(res, 'invalid filetype', 422);
+  }
+
+  try {
+    await snippetService.publish(
+      removeEmpty({
+        begin: Number(req.body['begin']),
+        end: Number(req.body['end']),
+        offset: Number(req.body['offset']),
+        extend: Number(req.body['extend']),
+        // if subtitles value is set, always use it
+        // otherwise default to showing subtitles only
+        // for gifs
+        subtitles:
+          !!req.body['subtitles'] &&
+          req.body['subtitles'] !== 'false' &&
+          req.body['subtitles'] !== '0',
+        filetype: req.body['filetype'] as 'gif' | 'mp4',
+        resolution: Number(req.body['resolution']),
+      })
+    );
+  } catch (e) {
+    if (typeof e === 'string') return error(res, e, 400);
+    throw e;
+  }
+
+  return json(res, { message: 'Snippet published!' });
+});
+
 SNIPPET_FILE_TYPES.forEach((filetype) => {
   router.get(`/${filetype}`, async (req, res) => {
     if (req.query['term']) {
@@ -163,7 +216,7 @@ SNIPPET_FILE_TYPES.forEach((filetype) => {
     }
 
     try {
-      const { filepath, renderTime, subtitleCorrection } =
+      const { snippet, renderTime, subtitleCorrection } =
         await snippetService.generate(
           Number(req.query['begin']),
           Number(req.query['end']),
@@ -182,11 +235,11 @@ SNIPPET_FILE_TYPES.forEach((filetype) => {
         );
 
       if (req.query['render']) {
-        return res.sendFile(getDataPath(filepath));
+        return res.sendFile(getDataPath(snippet.filepath));
       }
 
       return json(res, {
-        url: url(filepath),
+        url: url(snippet.filepath),
         render_time: renderTime,
         subtitle_correction: subtitleCorrection,
         cached: !renderTime,
