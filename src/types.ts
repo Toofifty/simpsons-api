@@ -1,5 +1,3 @@
-import type { FILE_TYPES } from './consts';
-
 export interface SnippetOptions {
   begin: number;
   end: number;
