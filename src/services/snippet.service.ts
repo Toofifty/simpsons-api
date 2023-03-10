@@ -11,7 +11,6 @@ import {
   MAX_SUBTITLE_LENGTH,
   SNIPPET_FILE_TYPES,
 } from '../consts';
-import type { SnippetOptions } from '../types';
 import { Snippet } from '../entities/snippet.entity';
 import type { ObjectQuery } from '@mikro-orm/core';
 
@@ -209,15 +208,16 @@ export const snippetService = {
     }${options.extend ? `+${options.extend}` : ''}.${options.filetype}`;
   },
 
-  async publish(options: SnippetOptions) {
-    const { snippet } = await this.generate(
-      options.begin,
-      options.end,
-      options
-    );
+  async publish(uuid: string) {
+    const snippetRepository = orm.em.getRepository(Snippet);
+    const snippet = await snippetRepository.findOne(uuid);
+
+    if (!snippet) {
+      throw 'Snippet not found';
+    }
 
     snippet.published = true;
-    await orm.em.persistAndFlush(snippet);
+    await snippetRepository.persistAndFlush(snippet);
   },
 
   async findAll(options: FindAllSnippetsOptions) {

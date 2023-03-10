@@ -150,36 +150,12 @@ router.get('/snippets', async (req, res) => {
 });
 
 router.post('/snippets/publish', async (req, res) => {
-  if (!req.body['begin']) {
-    return error(res, '`begin` field is required', 422);
-  }
-
-  if (!req.body['end']) {
-    return error(res, '`end` field is required', 422);
-  }
-
-  if (!['gif', 'mp4'].includes(req.body['filetype']?.toString())) {
-    return error(res, 'invalid filetype', 422);
+  if (!req.body['uuid']) {
+    return error(res, '`uuid` field is required', 422);
   }
 
   try {
-    await snippetService.publish(
-      removeEmpty({
-        begin: Number(req.body['begin']),
-        end: Number(req.body['end']),
-        offset: Number(req.body['offset']),
-        extend: Number(req.body['extend']),
-        // if subtitles value is set, always use it
-        // otherwise default to showing subtitles only
-        // for gifs
-        subtitles:
-          !!req.body['subtitles'] &&
-          req.body['subtitles'] !== 'false' &&
-          req.body['subtitles'] !== '0',
-        filetype: req.body['filetype'] as 'gif' | 'mp4',
-        resolution: Number(req.body['resolution']),
-      })
-    );
+    await snippetService.publish(req.body['uuid']);
   } catch (e) {
     if (typeof e === 'string') return error(res, e, 400);
     throw e;
@@ -239,6 +215,7 @@ SNIPPET_FILE_TYPES.forEach((filetype) => {
       }
 
       return json(res, {
+        uuid: snippet.uuid,
         url: url(snippet.filepath),
         render_time: renderTime,
         subtitle_correction: subtitleCorrection,
