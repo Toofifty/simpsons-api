@@ -10,7 +10,7 @@ import {
   MIN_TERM_LENGTH,
   SNAP_FILE_TYPES,
 } from '../consts';
-import { Loaded } from '@mikro-orm/core';
+import type { Loaded } from '@mikro-orm/core';
 
 interface FindQuoteOptions {
   term: string;
@@ -53,7 +53,10 @@ export const quoteService = {
       term,
     };
 
-    const [[episode], matches] = await episodeRepository.search(options);
+    const [[episode], matches] = await episodeRepository.search({
+      ...options,
+      offset: options.match,
+    });
 
     if (!episode) {
       return { meta: { total_matches: matches } };
@@ -238,7 +241,7 @@ export const quoteService = {
           thumbnail: await snapService.generateThumbnail({
             seasonId: episode.season.id,
             episodeInSeason: episode.idInSeason,
-            time: tsToSeconds(matchedSubtitles[0].timeBegin),
+            time: tsToSeconds(matchedSubtitles[0]?.timeBegin!),
           }),
         };
       })

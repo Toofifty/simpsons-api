@@ -216,7 +216,7 @@ export const snippetService = {
     }b${beginSubtitleId}e${endSubtitleId}${
       options.offset ? `~${options.offset}` : ''
     }${options.extend ? `+${options.extend}` : ''}${
-      (options.substitutions?.length ?? 0) > 0
+      options.substitutions && options.substitutions.length > 0
         ? '_' + hash(options.substitutions.join(','))
         : ''
     }.${options.filetype}`;
@@ -226,12 +226,12 @@ export const snippetService = {
     const snippetRepository = orm.em.getRepository(Snippet);
     const snippet = await snippetRepository.findOne(uuid);
 
-    if (snippet.filepath.includes('_')) {
-      throw 'Snippets with substitutions cannot be published';
-    }
-
     if (!snippet) {
       throw 'Snippet not found';
+    }
+
+    if (snippet.filepath.includes('_')) {
+      throw 'Snippets with substitutions cannot be published';
     }
 
     snippet.published = true;
