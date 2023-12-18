@@ -10,6 +10,7 @@ import {
 } from './services';
 import { getDataPath, removeEmpty, url } from './utils';
 import validators from './validators';
+import { splitCSV } from './utils/split-csv';
 
 export const router = Router();
 
@@ -208,6 +209,12 @@ SNIPPET_FILE_TYPES.forEach((filetype) => {
               : filetype === 'gif',
             filetype,
             resolution: Number(req.query['resolution']),
+            substitutions:
+              typeof req.query['substitutions'] === 'string'
+                ? splitCSV(req.query['substitutions']).map((s) =>
+                    s === '~' ? undefined : s
+                  )
+                : undefined,
           })
         );
 

@@ -13,6 +13,7 @@ import {
 } from '../consts';
 import { Snippet } from '../entities/snippet.entity';
 import type { ObjectQuery } from '@mikro-orm/core';
+import { hash } from '../utils/hash';
 
 interface GenSnippetOptions {
   subtitles?: boolean;
@@ -20,6 +21,7 @@ interface GenSnippetOptions {
   extend?: number;
   filetype?: typeof SNIPPET_FILE_TYPES[number];
   resolution?: number;
+  substitutions?: (string | undefined)[];
 }
 
 interface FindAllSnippetsOptions {
@@ -105,7 +107,11 @@ export const snippetService = {
 
     const [first, last] = ends(subtitles);
 
-    const vtt = await this.createVTT(subtitles, -tsToSeconds(first.timeBegin));
+    const vtt = await this.createVTT(
+      subtitles,
+      -tsToSeconds(first.timeBegin),
+      options.substitutions
+    );
 
     const subtitlePath = getDataPath(
       'vtt',
@@ -181,15 +187,19 @@ export const snippetService = {
     };
   },
 
-  async createVTT(subtitles: Subtitle[], offset: number) {
+  async createVTT(
+    subtitles: Subtitle[],
+    offset: number,
+    substitutions?: (string | undefined)[]
+  ) {
     return (
       'WEBVTT\n\n' +
       subtitles
         .map(
-          (subtitle) =>
+          (subtitle, i) =>
             `${subtitle.getTimeBegin(offset)} --> ${subtitle.getTimeEnd(
               offset
-            )}\n${subtitle.text}`
+            )}\n${substitutions?.[i] ?? subtitle.text}`
         )
         .join('\n\n') +
       '\n'
@@ -205,12 +215,20 @@ export const snippetService = {
       options.subtitles ? 's' : 'ns'
     }b${beginSubtitleId}e${endSubtitleId}${
       options.offset ? `~${options.offset}` : ''
-    }${options.extend ? `+${options.extend}` : ''}.${options.filetype}`;
+    }${options.extend ? `+${options.extend}` : ''}${
+      (options.substitutions?.length ?? 0) > 0
+        ? '_' + hash(options.substitutions.join(','))
+        : ''
+    }.${options.filetype}`;
   },
 
   async publish(uuid: string) {
     const snippetRepository = orm.em.getRepository(Snippet);
     const snippet = await snippetRepository.findOne(uuid);
+
+    if (snippet.filepath.includes('_')) {
+      throw 'Snippets with substitutions cannot be published';
+    }
 
     if (!snippet) {
       throw 'Snippet not found';
