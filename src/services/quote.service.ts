@@ -208,6 +208,11 @@ export const quoteService = {
           before: previousSubtitles.map((subtitle) => subtitle.normalize()),
           lines: matchedSubtitles.map((subtitle) => subtitle.normalize()),
           after: nextSubtitles.map((subtitle) => subtitle.normalize()),
+          thumbnail: await snapService.generateThumbnail({
+            seasonId: episode.season.id,
+            episodeInSeason: episode.idInSeason,
+            time: tsToSeconds(matchedSubtitles[0].timeBegin),
+          }),
         });
 
         // use the old endIndex as the starting point for the next search

@@ -1,6 +1,7 @@
 import ffmpeg from 'fluent-ffmpeg';
 
 import { getDataPath } from '../utils';
+import { DEFAULT_IMAGE_SCALE } from '../consts';
 
 interface SaveGifOptions {
   source: string;
@@ -15,6 +16,7 @@ interface SaveSnapOptions {
   source: string;
   offset: number;
   output: string;
+  scale?: string;
 }
 
 export const ffmpegService = {
@@ -45,7 +47,12 @@ export const ffmpegService = {
     });
   },
 
-  saveSnap({ source, offset, output }: SaveSnapOptions) {
+  saveSnap({
+    source,
+    offset,
+    output,
+    scale = DEFAULT_IMAGE_SCALE,
+  }: SaveSnapOptions) {
     return new Promise<number>((res, rej) => {
       const start = Date.now();
       ffmpeg(getDataPath('source', source))
@@ -53,6 +60,7 @@ export const ffmpegService = {
         .takeFrames(1)
         .on('end', () => res(Date.now() - start))
         .on('error', rej)
+        .videoFilters([`scale=${scale}`])
         .save(output);
     });
   },
