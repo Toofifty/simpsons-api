@@ -6,10 +6,11 @@ import { Episode } from '../entities/episode.entity';
 import { Subtitle } from '../entities';
 import { snapService } from './snap.service';
 import {
-  MAX_EPISODE_MATCH_LIMIT,
+  DEFAULT_SUBTITLE_MATCH_LIMIT,
   MIN_TERM_LENGTH,
   SNAP_FILE_TYPES,
 } from '../consts';
+import { Loaded } from '@mikro-orm/core';
 
 interface FindQuoteOptions {
   term: string;
@@ -30,6 +31,8 @@ interface QuoteInfoOptions {
 
 interface SearchQuoteOptions {
   term: string;
+  offset?: number;
+  limit?: number;
 }
 
 const defaultOptions = {
@@ -154,31 +157,55 @@ export const quoteService = {
     };
   },
 
-  async search(rawOptions: SearchQuoteOptions) {
+  async search(options: SearchQuoteOptions) {
     const episodeRepository = orm.em.getRepository(Episode);
     const subtitleRepository = orm.em.getRepository(Subtitle);
 
-    const term = rawOptions.term.split('[...]').map(normalizeTerm).join('%');
+    const offset = options.offset ?? 0;
+    const limit = options.limit ?? DEFAULT_SUBTITLE_MATCH_LIMIT;
+
+    const term = options.term.split('[...]').map(normalizeTerm).join('%');
 
     if (term.length < MIN_TERM_LENGTH) {
       throw `Minimum search length is ${MIN_TERM_LENGTH} characters`;
     }
 
-    const [episodes, totalMatches] = await episodeRepository.search({
+    // contains all episodes with one or more of the term appearing
+    // in it's transcript
+    const [episodes, episodesMatched] = await episodeRepository.search({
       term,
-      match: 0,
-      limit: MAX_EPISODE_MATCH_LIMIT,
+      offset,
     });
 
-    if (totalMatches === 0) {
+    if (episodesMatched === 0) {
       return { total_results: 0, matches: [] };
     }
 
-    const resolveMatches = episodes.map(async (episode) => {
-      const episodeMatches = [];
+    // find all subtitle matches first
+    const allSubtitleMatches = episodes.flatMap((episode) => {
+      const episodeMatches: {
+        episode: Loaded<Episode, 'season'>;
+        beginIndex: number;
+        endIndex: number;
+      }[] = [];
       let [beginIndex, endIndex] = this.findIndices(episode, term);
-
       while (beginIndex > -1 && endIndex > -1) {
+        episodeMatches.push({
+          episode,
+          beginIndex,
+          endIndex,
+        });
+
+        [beginIndex, endIndex] = this.findIndices(episode, term, endIndex);
+      }
+
+      return episodeMatches;
+    });
+
+    const subtitleMatches = allSubtitleMatches.slice(offset, offset + limit);
+
+    const matches = await Promise.all(
+      subtitleMatches.map(async ({ episode, beginIndex, endIndex }) => {
         const matchedSubtitles = await subtitleRepository.findMatchedSubtitles({
           episodeId: episode.id,
           beginIndex,
@@ -197,7 +224,7 @@ export const quoteService = {
           minId: Math.max(...matchedIds),
         });
 
-        episodeMatches.push({
+        return {
           meta: {
             season_number: episode.season.id,
             season_title: episode.season.title,
@@ -213,21 +240,17 @@ export const quoteService = {
             episodeInSeason: episode.idInSeason,
             time: tsToSeconds(matchedSubtitles[0].timeBegin),
           }),
-        });
-
-        // use the old endIndex as the starting point for the next search
-        [beginIndex, endIndex] = this.findIndices(episode, term, endIndex);
-      }
-
-      return episodeMatches;
-    });
-
-    const matches = (await Promise.all(resolveMatches)).flat();
+        };
+      })
+    );
 
     matches.sort((a, b) => a.lines[0]!.id - b.lines[0]!.id);
 
     return {
-      total_results: matches.length,
+      total_results: allSubtitleMatches.length,
+      offset,
+      limit,
+      remaining: allSubtitleMatches.length - (offset + limit),
       matches,
     };
   },

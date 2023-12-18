@@ -1,6 +1,6 @@
 import { Response, Router } from 'express';
 import { unflatten } from 'flat';
-import { SNIPPET_FILE_TYPES } from './consts';
+import { MAX_SUBTITLE_MATCH_LIMIT, SNIPPET_FILE_TYPES } from './consts';
 import {
   episodeService,
   logService,
@@ -123,12 +123,37 @@ router.get('/search', async (req, res) => {
   if (!req.query['term']) {
     return error(res, '`term` field is required', 422);
   }
+
+  const offset = req.query['offset'] ? Number(req.query['offset']) : undefined;
+  const limit = req.query['limit'] ? Number(req.query['limit']) : undefined;
+
+  if (limit !== undefined) {
+    if (limit <= 0) {
+      return error(res, '`limit` must be greater than one', 422);
+    }
+    if (limit > MAX_SUBTITLE_MATCH_LIMIT) {
+      return error(
+        res,
+        `\`limit\` must be less than or equal to ${MAX_SUBTITLE_MATCH_LIMIT}`,
+        422
+      );
+    }
+  }
+
+  if (offset !== undefined) {
+    if (offset < 0) {
+      return error(res, '`offset` must be greater than or equal to zero', 422);
+    }
+  }
+
   try {
     return json(
       res,
       await quoteService.search(
         removeEmpty({
           term: req.query['term'].toString(),
+          offset,
+          limit,
         })
       )
     );
