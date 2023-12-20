@@ -39,7 +39,9 @@ export const ffmpegService = {
           'fps=24',
           `scale=${resolution}:-1:flags=lanczos`,
           ...(subtitlePath
-            ? [`subtitles=${subtitlePath}:force_style='FontSize=24'`]
+            ? [
+                `subtitles=${subtitlePath}:fontsdir=${getDataPath()}:force_style='Fontname=Akbar,FontSize=32,Outline=2'`,
+              ]
             : []),
         ])
         .outputOptions(['-movflags +faststart', '-strict -2'])

@@ -35,7 +35,7 @@ interface FindAllSnippetsOptions {
 const defaultOptions = {
   subtitles: true,
   filetype: 'gif',
-  resolution: 240,
+  resolution: 480,
 } as const;
 
 export const snippetService = {
@@ -94,7 +94,12 @@ export const snippetService = {
     const abspath = getDataPath(filepath);
     const existingSnippet = await snippetRepository.findOne({ filepath });
 
-    if (config('USE_CACHE') && existsSync(abspath) && existingSnippet) {
+    if (
+      false &&
+      config('USE_CACHE') &&
+      existsSync(abspath) &&
+      existingSnippet
+    ) {
       existingSnippet.views++;
       await snippetRepository.persistAndFlush(existingSnippet);
 
