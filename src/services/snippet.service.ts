@@ -94,12 +94,7 @@ export const snippetService = {
     const abspath = getDataPath(filepath);
     const existingSnippet = await snippetRepository.findOne({ filepath });
 
-    if (
-      false &&
-      config('USE_CACHE') &&
-      existsSync(abspath) &&
-      existingSnippet
-    ) {
+    if (config('USE_CACHE') && existsSync(abspath) && existingSnippet) {
       existingSnippet.views++;
       await snippetRepository.persistAndFlush(existingSnippet);
 
