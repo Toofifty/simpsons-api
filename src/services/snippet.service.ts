@@ -263,4 +263,31 @@ export const snippetService = {
 
     return { results, count };
   },
+
+  async random() {
+    const [allRecords, count] = await orm.em
+      .getRepository(Snippet)
+      .findAndCount({ published: true });
+
+    if (allRecords.length < 1) {
+      return undefined;
+    }
+
+    const record = allRecords[Math.floor(Math.random() * count)]!;
+    await record.subtitles.init();
+
+    const { filepath, snapshot, ...snippet } = record;
+
+    return {
+      result: {
+        ...snippet,
+        url: url(filepath),
+        snapshot: url(snapshot),
+        subtitles: snippet.subtitles.getItems().map((subtitle) => ({
+          id: subtitle.id,
+          text: subtitle.text,
+        })),
+      },
+    };
+  },
 };

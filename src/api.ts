@@ -41,10 +41,16 @@ router.get('/', async (_, res) => {
 });
 
 router.get('/logs', async (req, res) => {
+  const result = validators.logs.findAll.safeParse(unflatten(req.query));
+
+  if (!result.success) {
+    return error(res, result.error.flatten(), 422);
+  }
+
   const [logs, total] = await logService.viewAll({
     filter: req.query['filter']?.toString(),
-    page: Number(req.query['page']),
-    perpage: Number(req.query['perpage']),
+    offset: Number(req.query['offset']),
+    limit: Number(req.query['limit']),
   });
   return json(res, { total, logs });
 });
@@ -173,6 +179,16 @@ router.get('/snippets', async (req, res) => {
   const data = await snippetService.findAll(result.data);
 
   return json(res, data);
+});
+
+router.get('/snippets/random', async (_, res) => {
+  const snippet = await snippetService.random();
+
+  if (!snippet) {
+    return error(res, 'No snippets found', 404);
+  }
+
+  return json(res, snippet);
 });
 
 router.post('/snippets/publish', async (req, res) => {

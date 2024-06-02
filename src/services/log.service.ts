@@ -4,8 +4,8 @@ import { orm } from '../orm';
 
 interface ViewAllOptions {
   filter?: string;
-  page: number;
-  perpage?: number;
+  offset: number;
+  limit?: number;
 }
 
 export const logService = {
@@ -29,13 +29,12 @@ export const logService = {
     logRepository.persistAndFlush(log);
   },
 
-  viewAll({ filter, page, perpage = 10 }: ViewAllOptions) {
-    if (perpage > 50) perpage = 50;
+  viewAll({ filter, offset, limit = 10 }: ViewAllOptions) {
     return orm.em
       .getRepository(Log)
       .findAndCount(filter ? { requestPath: { $like: `%${filter}%` } } : {}, {
-        limit: perpage,
-        offset: (page - 1) * perpage,
+        limit,
+        offset,
         orderBy: { createdAt: 'DESC' },
       });
   },

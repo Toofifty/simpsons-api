@@ -17,4 +17,11 @@ export default {
         .optional(),
     }),
   },
+  logs: {
+    findAll: z.object({
+      filter: z.string().optional(),
+      offset: z.preprocess(toNumber, z.number().positive().optional()),
+      limit: z.preprocess(toNumber, z.number().positive().max(50).optional()),
+    }),
+  },
 };
