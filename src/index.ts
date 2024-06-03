@@ -41,7 +41,7 @@ const server = http.createServer(app);
       }
     },
     express.static(path),
-    async (req, res, next) => {
+    async (req, _, next) => {
       if (req.method === 'GET') {
         const path = req.url.split('/')[2];
         if (path) {
