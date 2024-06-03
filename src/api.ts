@@ -222,18 +222,19 @@ router.get('/clips', async (req, res) => {
 });
 
 router.get('/clips/random', async (req, res) => {
-  const { clip, generation, renderTime, subtitleCorrection } =
-    await clipService.randomClip(
-      removeEmpty({
-        renderSubtitles: !!req.query['subtitles'],
-        filetype: req.query['filetype']?.toString() ?? ('gif' as any),
-        resolution: Number(req.query['resolution'] ?? '240'),
-      })
-    );
+  const result = await clipService.randomClip(
+    removeEmpty({
+      renderSubtitles: !!req.query['subtitles'],
+      filetype: req.query['filetype']?.toString() ?? ('gif' as any),
+      resolution: Number(req.query['resolution'] ?? '240'),
+    })
+  );
 
-  if (!clip) {
+  if (!result) {
     return error(res, 'No clips found', 404);
   }
+
+  const { clip, generation, renderTime, subtitleCorrection } = result;
 
   return json(res, {
     clip_uuid: clip.uuid,
