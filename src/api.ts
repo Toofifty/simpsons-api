@@ -221,14 +221,33 @@ router.get('/clips', async (req, res) => {
   return json(res, data);
 });
 
-router.get('/clips/random', async (_, res) => {
-  const snippet = await clipService.randomClip();
+router.get('/clips/random', async (req, res) => {
+  const { clip, generation, renderTime, subtitleCorrection } =
+    await clipService.randomClip(
+      removeEmpty({
+        renderSubtitles: !!req.query['subtitles'],
+        filetype: req.query['filetype']?.toString() ?? ('gif' as any),
+        resolution: Number(req.query['resolution'] ?? '240'),
+      })
+    );
 
-  if (!snippet) {
+  if (!clip) {
     return error(res, 'No clips found', 404);
   }
 
-  return json(res, snippet);
+  return json(res, {
+    clip_uuid: clip.uuid,
+    generation_uuid: generation.uuid,
+    url: url(generation.getFilepath()),
+    render_time: renderTime,
+    subtitle_correction: subtitleCorrection,
+    cached: !renderTime,
+    clip_views: Number(clip.views),
+    clip_copies: Number(clip.copies),
+    generation_views: generation.views,
+    generation_copies: generation.copies,
+    subtitles: await clipService.getSubtitles(clip),
+  });
 });
 
 router.get('/generations/track-copy', async (req, res) => {
@@ -312,7 +331,8 @@ CLIP_FILE_TYPES.forEach((filetype) => {
       }
 
       return json(res, {
-        uuid: generation.uuid,
+        clip_uuid: clip.uuid,
+        generation_uuid: generation.uuid,
         url: url(generation.getFilepath()),
         render_time: renderTime,
         subtitle_correction: subtitleCorrection,

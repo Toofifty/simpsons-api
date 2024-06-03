@@ -135,7 +135,7 @@ export const clipService = {
         ...genOptions,
         renderSubtitles: genOptions.renderSubtitles ?? false,
         copies: 0,
-        views: 1,
+        views: 0,
       });
       generationRepository.persistAndFlush(generation);
     }
@@ -306,17 +306,6 @@ export const clipService = {
       throw 'Failed to decode options from path';
     }
 
-    console.log({
-      matches,
-      resolution,
-      renderSubtitles,
-      begin,
-      end,
-      offset,
-      extend,
-      filetype,
-    });
-
     return {
       clipOptions: {
         begin: Number(begin),
@@ -424,7 +413,7 @@ export const clipService = {
 
   async findAllClips(options: FindAllClipsOptions) {
     const [rawResults, count] = await orm.em.getRepository(Clip).findAndCount(
-      { copies: { $gt: -1 } },
+      { copies: { $gt: 0 } },
       {
         orderBy: { [options.sort_by ?? 'views']: options.order ?? 'desc' },
         limit: options.limit && options.limit < 100 ? options.limit : 10,
@@ -439,6 +428,9 @@ export const clipService = {
           options.filetype
         );
         return {
+          clip_uuid: clip.uuid,
+          generation_uuid: generation.uuid,
+          options: clip.getOptions(),
           views: Number(clip.views),
           copies: Number(clip.copies),
           episode_id: clip.episode.id,
@@ -452,10 +444,10 @@ export const clipService = {
     return { results, count };
   },
 
-  async randomClip() {
+  async randomClip(options: GenerationOptions) {
     const [allRecords, count] = await orm.em
       .getRepository(Clip)
-      .findAndCount({ copies: { $gt: -1 } });
+      .findAndCount({ copies: { $gt: 0 } });
 
     if (allRecords.length < 1) {
       return undefined;
@@ -463,18 +455,7 @@ export const clipService = {
 
     const clip = allRecords[Math.floor(Math.random() * count)]!;
 
-    const generation = await this.getDefaultGeneration(clip, 'gif');
-
-    return {
-      result: {
-        views: Number(clip.views),
-        copies: Number(clip.copies),
-        episode_id: clip.episode.id,
-        snapshot: url(generation.snapshot),
-        url: url(generation.getFilepath()),
-        subtitles: await this.getSubtitles(clip),
-      },
-    };
+    return this.generate(clip.getOptions(), options);
   },
 
   async trackView(generation: Generation) {

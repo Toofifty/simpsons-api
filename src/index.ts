@@ -32,7 +32,9 @@ const server = http.createServer(app);
         req.method === 'GET' &&
         !req.url.includes('.jpg') &&
         !req.url.includes('.webm') &&
-        !req.headers['x-simpsons-frontend']
+        !['http://localhost:5173/', 'https://simpsons.matho.me/'].includes(
+          req.headers.referer!
+        )
       ) {
         const path = req.url.split('/')[2];
         if (path) await clipService.trackViewFromPath(path);
