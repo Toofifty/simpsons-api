@@ -10,6 +10,7 @@ import { orm } from './orm';
 import { FILE_TYPES } from './consts';
 
 import { router } from './api';
+import { clipService } from './services';
 
 const app = express();
 const server = http.createServer(app);
@@ -19,7 +20,36 @@ const server = http.createServer(app);
   const path = getDataPath(type);
   if (!existsSync(path)) mkdirSync(path);
 
-  app.use(`/${type}`, cors(), express.static(path));
+  app.use(
+    `/${type}`,
+    cors(),
+    (_, __, next) => {
+      RequestContext.create(orm.em, next);
+    },
+    async (req, _, next) => {
+      next();
+      if (
+        req.method === 'GET' &&
+        !req.url.includes('.jpg') &&
+        !req.url.includes('.webm') &&
+        !req.headers['x-simpsons-frontend']
+      ) {
+        const path = req.url.split('/')[2];
+        if (path) await clipService.trackViewFromPath(path);
+      }
+    },
+    express.static(path),
+    async (req, res, next) => {
+      if (req.method === 'GET') {
+        const path = req.url.split('/')[2];
+        if (path) {
+          await clipService.generateFromUrl(path);
+        }
+      }
+      next();
+    },
+    express.static(path, { fallthrough: false })
+  );
 });
 
 app.use((_, __, next) => {

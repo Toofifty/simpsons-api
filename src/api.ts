@@ -1,22 +1,25 @@
 import { Response, Router } from 'express';
 import { unflatten } from 'flat';
-import { MAX_SUBTITLE_MATCH_LIMIT, SNIPPET_FILE_TYPES } from './consts';
+import { MAX_SUBTITLE_MATCH_LIMIT, CLIP_FILE_TYPES } from './consts';
 import {
   episodeService,
   logService,
   quoteService,
-  snippetService,
+  clipService,
   statsService,
 } from './services';
 import { getDataPath, removeEmpty, url } from './utils';
 import validators from './validators';
-import { splitCSV } from './utils/split-csv';
 
 export const router = Router();
 
 const json = (res: Response, data: Record<string, any>) => {
   const responseTime = Date.now() - (res.req as any).start;
-  logService.logRequest(res, 200, responseTime, data['render_time']);
+  try {
+    logService.logRequest(res, 200, responseTime, data['render_time']);
+  } catch {
+    // may fail due to long request url
+  }
 
   return res.send({
     status: 200,
@@ -176,13 +179,13 @@ router.get('/snippets', async (req, res) => {
     return error(res, result.error.flatten(), 422);
   }
 
-  const data = await snippetService.findAll(result.data);
+  const data = await clipService.findAll(result.data);
 
   return json(res, data);
 });
 
 router.get('/snippets/random', async (_, res) => {
-  const snippet = await snippetService.random();
+  const snippet = await clipService.random();
 
   if (!snippet) {
     return error(res, 'No snippets found', 404);
@@ -197,7 +200,7 @@ router.post('/snippets/publish', async (req, res) => {
   }
 
   try {
-    await snippetService.publish(req.body['uuid']);
+    await clipService.publish(req.body['uuid']);
   } catch (e) {
     if (typeof e === 'string') return error(res, e, 400);
     throw e;
@@ -206,7 +209,7 @@ router.post('/snippets/publish', async (req, res) => {
   return json(res, { message: 'Snippet published!' });
 });
 
-SNIPPET_FILE_TYPES.forEach((filetype) => {
+CLIP_FILE_TYPES.forEach((filetype) => {
   router.get(`/${filetype}`, async (req, res) => {
     if (req.query['term']) {
       const data = await quoteService.find(
@@ -235,41 +238,57 @@ SNIPPET_FILE_TYPES.forEach((filetype) => {
     }
 
     try {
-      const { snippet, renderTime, subtitleCorrection } =
-        await snippetService.generate(
-          Number(req.query['begin']),
-          Number(req.query['end']),
+      const { clip, generation, renderTime, subtitleCorrection } =
+        await clipService.generate(
           removeEmpty({
+            begin: Number(req.query['begin']),
+            end: Number(req.query['end']),
             offset: Number(req.query['offset']),
             extend: Number(req.query['extend']),
+          }),
+          removeEmpty({
             // if subtitles value is set, always use it
             // otherwise default to showing subtitles only
             // for gifs
-            subtitles: req.query['subtitles']
+            renderSubtitles: req.query['subtitles']
               ? Boolean(Number(req.query['subtitles']))
               : filetype === 'gif',
             filetype,
             resolution: Number(req.query['resolution']),
             substitutions:
               typeof req.query['substitutions'] === 'string'
-                ? splitCSV(req.query['substitutions']).map((s) =>
-                    s === '~' ? undefined : s
-                  )
+                ? req.query['substitutions']
                 : undefined,
           })
         );
 
+      if (renderTime > 0) {
+        await clipService.trackView(generation);
+      }
+
+      clipService.generateDefaults(
+        removeEmpty({
+          begin: Number(req.query['begin']),
+          end: Number(req.query['end']),
+          offset: Number(req.query['offset']),
+          extend: Number(req.query['extend']),
+        })
+      );
+
       if (req.query['render']) {
-        return res.sendFile(getDataPath(snippet.filepath));
+        return res.sendFile(getDataPath(generation.getFilepath()));
       }
 
       return json(res, {
-        uuid: snippet.uuid,
-        published: snippet.published,
-        url: url(snippet.filepath),
+        uuid: generation.uuid,
+        url: url(generation.getFilepath()),
         render_time: renderTime,
         subtitle_correction: subtitleCorrection,
         cached: !renderTime,
+        clip_views: await clip.getViews(),
+        clip_copies: await clip.getCopies(),
+        generation_views: generation.views,
+        generation_copies: generation.copies,
       });
     } catch (e) {
       if (typeof e === 'string') return error(res, e, 400);

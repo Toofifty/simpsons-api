@@ -14,12 +14,15 @@ import type { SnippetOptions } from '../types';
 import { Episode } from './episode.entity';
 import { Subtitle } from './subtitle.entity';
 
+/**
+ * @deprecated
+ */
 @Entity({ tableName: 'snippets', customRepository: () => SnippetRepository })
 export class Snippet {
   [EntityRepositoryType]?: SnippetRepository;
 
   @PrimaryKey({ type: 'char(36)' })
-  uuid: string = randomUUID();
+  uuid?: string = randomUUID();
 
   @ManyToOne(() => Episode, { wrappedReference: true })
   episode!: IdentifiedReference<Episode>;
@@ -43,8 +46,8 @@ export class Snippet {
   subtitles: Collection<Subtitle> = new Collection<Subtitle>(this);
 
   @Property({ type: 'datetime', onCreate: () => new Date() })
-  createdAt: Date = new Date();
+  createdAt?: Date = new Date();
 
   @Property({ type: 'datetime', onUpdate: () => new Date() })
-  updatedAt: Date = new Date();
+  updatedAt?: Date = new Date();
 }
