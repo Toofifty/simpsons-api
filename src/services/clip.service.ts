@@ -38,6 +38,14 @@ interface FindAllSnippetsOptions {
   offset?: number;
 }
 
+interface FindAllClipsOptions {
+  filetype: 'gif' | 'mp4';
+  sort_by?: 'created_at' | 'views' | 'episode_id';
+  order?: 'asc' | 'desc';
+  limit?: number;
+  offset?: number;
+}
+
 const defaultOptions = {
   subtitles: true,
   filetype: 'gif',
@@ -236,6 +244,7 @@ export const clipService = {
       extend: options.extend ?? 0,
     });
     subtitleRepository.persistAndFlush(clip);
+
     return clip;
   },
 
@@ -392,6 +401,82 @@ export const clipService = {
     };
   },
 
+  async getDefaultGeneration(clip: Clip, filetype: 'gif' | 'mp4') {
+    const result = await this.generate(clip.getOptions(), {
+      resolution: 480,
+      renderSubtitles: filetype === 'gif',
+      filetype: filetype,
+    });
+    return result.generation;
+  },
+
+  async getSubtitles(clip: Clip) {
+    const subtitleRepository = orm.em.getRepository(Subtitle);
+    const subtitles = await subtitleRepository.find({
+      id: { $gte: clip.subtitleBegin, $lte: clip.subtitleEnd },
+    });
+
+    return subtitles.map((subtitle) => ({
+      id: subtitle.id,
+      text: subtitle.text,
+    }));
+  },
+
+  async findAllClips(options: FindAllClipsOptions) {
+    const [rawResults, count] = await orm.em.getRepository(Clip).findAndCount(
+      { copies: { $gt: -1 } },
+      {
+        orderBy: { [options.sort_by ?? 'views']: options.order ?? 'desc' },
+        limit: options.limit && options.limit < 100 ? options.limit : 10,
+        offset: options.offset ?? 0,
+      }
+    );
+
+    const results = await Promise.all(
+      rawResults.map(async (clip) => {
+        const generation = await this.getDefaultGeneration(
+          clip,
+          options.filetype
+        );
+        return {
+          views: Number(clip.views),
+          copies: Number(clip.copies),
+          episode_id: clip.episode.id,
+          snapshot: url(generation.snapshot),
+          url: url(generation.getFilepath()),
+          subtitles: await this.getSubtitles(clip),
+        };
+      })
+    );
+
+    return { results, count };
+  },
+
+  async randomClip() {
+    const [allRecords, count] = await orm.em
+      .getRepository(Clip)
+      .findAndCount({ copies: { $gt: -1 } });
+
+    if (allRecords.length < 1) {
+      return undefined;
+    }
+
+    const clip = allRecords[Math.floor(Math.random() * count)]!;
+
+    const generation = await this.getDefaultGeneration(clip, 'gif');
+
+    return {
+      result: {
+        views: Number(clip.views),
+        copies: Number(clip.copies),
+        episode_id: clip.episode.id,
+        snapshot: url(generation.snapshot),
+        url: url(generation.getFilepath()),
+        subtitles: await this.getSubtitles(clip),
+      },
+    };
+  },
+
   async trackView(generation: Generation) {
     const generationRepository = orm.em.getRepository(Generation);
     generation.views++;
@@ -432,5 +517,12 @@ export const clipService = {
     );
 
     await this.generate(clipOptions, genOptions);
+  },
+
+  async trackCopy(uuid: string) {
+    const generationRepository = orm.em.getRepository(Generation);
+    const generation = await generationRepository.findOneOrFail({ uuid });
+    generation.copies++;
+    generationRepository.persistAndFlush(generation);
   },
 };

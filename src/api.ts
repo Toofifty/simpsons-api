@@ -209,6 +209,38 @@ router.post('/snippets/publish', async (req, res) => {
   return json(res, { message: 'Snippet published!' });
 });
 
+router.get('/clips', async (req, res) => {
+  const result = validators.clips.findAll.safeParse(unflatten(req.query));
+
+  if (!result.success) {
+    return error(res, result.error.flatten(), 422);
+  }
+
+  const data = await clipService.findAllClips(result.data);
+
+  return json(res, data);
+});
+
+router.get('/clips/random', async (_, res) => {
+  const snippet = await clipService.randomClip();
+
+  if (!snippet) {
+    return error(res, 'No clips found', 404);
+  }
+
+  return json(res, snippet);
+});
+
+router.get('/generations/track-copy', async (req, res) => {
+  if (!req.query['uuid']) {
+    return;
+  }
+
+  await clipService.trackCopy(req.query['uuid'].toString());
+
+  return json(res, { message: 'Copy tracked' });
+});
+
 CLIP_FILE_TYPES.forEach((filetype) => {
   router.get(`/${filetype}`, async (req, res) => {
     if (req.query['term']) {
@@ -285,8 +317,8 @@ CLIP_FILE_TYPES.forEach((filetype) => {
         render_time: renderTime,
         subtitle_correction: subtitleCorrection,
         cached: !renderTime,
-        clip_views: await clip.getViews(),
-        clip_copies: await clip.getCopies(),
+        clip_views: Number(clip.views),
+        clip_copies: Number(clip.copies),
         generation_views: generation.views,
         generation_copies: generation.copies,
       });

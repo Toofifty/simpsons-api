@@ -2,6 +2,7 @@ import {
   Collection,
   Entity,
   EntityRepositoryType,
+  Formula,
   IdentifiedReference,
   ManyToOne,
   OneToMany,
@@ -48,12 +49,27 @@ export class Clip {
   @Property({ type: 'datetime', onUpdate: () => new Date() })
   updatedAt?: Date = new Date();
 
-  public getDefaultFilename(filetype: 'gif' | 'mp4') {
-    return Generation.getFilename(this, {
-      resolution: 480,
-      filetype,
-      renderSubtitles: filetype === 'gif',
-    });
+  @Formula(
+    (alias) =>
+      `(select sum(views) from generations g where g.clip_uuid = ${alias}.uuid)`,
+    { type: 'number' }
+  )
+  views?: number;
+
+  @Formula(
+    (alias) =>
+      `(select sum(copies) from generations g where g.clip_uuid = ${alias}.uuid)`,
+    { type: 'number' }
+  )
+  copies?: number;
+
+  public getOptions() {
+    return {
+      begin: this.subtitleBegin,
+      end: this.subtitleEnd,
+      offset: this.offset,
+      extend: this.extend,
+    };
   }
 
   public async getCopies() {
