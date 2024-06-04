@@ -11,6 +11,7 @@ import {
   SNAP_FILE_TYPES,
 } from '../consts';
 import type { Loaded } from '@mikro-orm/core';
+import { clipService } from './clip.service';
 
 interface FindQuoteOptions {
   term: string;
@@ -164,14 +165,24 @@ export const quoteService = {
     const episodeRepository = orm.em.getRepository(Episode);
     const subtitleRepository = orm.em.getRepository(Subtitle);
 
-    const offset = options.offset ?? 0;
-    const limit = options.limit ?? DEFAULT_SUBTITLE_MATCH_LIMIT;
+    let offset = options.offset ?? 0;
+    let limit = options.limit ?? DEFAULT_SUBTITLE_MATCH_LIMIT;
 
     const term = options.term.split('[...]').map(normalizeTerm).join('%');
 
     if (term.length < MIN_TERM_LENGTH) {
       throw `Minimum search length is ${MIN_TERM_LENGTH} characters`;
     }
+
+    const [clipMatches, clipMatchCount] = await clipService.searchClips({
+      term,
+      offset,
+      limit,
+    });
+
+    limit -= clipMatches.length;
+
+    if (limit < 0) limit = 0;
 
     // contains all episodes with one or more of the term appearing
     // in it's transcript
@@ -181,7 +192,7 @@ export const quoteService = {
     });
 
     if (episodesMatched === 0) {
-      return { total_results: 0, matches: [] };
+      return { total_results: 0, matches: [], clip_matches: [] };
     }
 
     // find all subtitle matches first
@@ -250,11 +261,15 @@ export const quoteService = {
     matches.sort((a, b) => a.lines[0]!.id - b.lines[0]!.id);
 
     return {
-      total_results: allSubtitleMatches.length,
+      total_results: allSubtitleMatches.length + clipMatchCount,
       offset,
-      limit,
-      remaining: allSubtitleMatches.length - (offset + limit),
+      limit: options.limit ?? DEFAULT_SUBTITLE_MATCH_LIMIT,
+      remaining: Math.max(
+        0,
+        allSubtitleMatches.length + clipMatchCount - (offset + limit)
+      ),
       matches,
+      clip_matches: clipMatches,
     };
   },
 

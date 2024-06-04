@@ -41,7 +41,6 @@ export const episodeService = {
     await Promise.all(
       FILE_TYPES.map(async (filetype) => {
         const dirpath = getDataPath(filetype, episode.identifier);
-        console.log('purge', dirpath);
         await promises.rm(dirpath, { recursive: true, force: true });
       })
     );

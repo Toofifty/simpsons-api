@@ -14,6 +14,7 @@ import {
 import { Snippet } from '../entities/snippet.entity';
 import type { ObjectQuery } from '@mikro-orm/core';
 import { splitCSV } from '../utils/split-csv';
+import { snapService } from './snap.service';
 
 interface ClipOptions {
   begin: number;
@@ -44,6 +45,12 @@ interface FindAllClipsOptions {
   order?: 'asc' | 'desc';
   limit?: number;
   offset?: number;
+}
+
+interface SearchClipsOptions {
+  term: string;
+  offset?: number;
+  limit?: number;
 }
 
 const defaultOptions = {
@@ -456,6 +463,64 @@ export const clipService = {
     const clip = allRecords[Math.floor(Math.random() * count)]!;
 
     return this.generate(clip.getOptions(), options);
+  },
+
+  async searchClips(options: SearchClipsOptions) {
+    const [clips, count] = await orm.em.getRepository(Clip).findAndCount(
+      {
+        subtitleIndex: { $like: `%${options.term}%` },
+        copies: { $gt: 0 },
+      },
+      {
+        limit: options.limit,
+        offset: options.offset,
+        populate: ['episode'],
+      }
+    );
+
+    const subtitleRepository = orm.em.getRepository(Subtitle);
+
+    return [
+      await Promise.all(
+        clips.map(async (clip) => {
+          const episode = clip.episode.get();
+
+          const matchedSubtitles = await subtitleRepository.find({
+            id: { $gte: clip.subtitleBegin, $lte: clip.subtitleEnd },
+          });
+
+          return {
+            clip: {
+              uuid: clip.uuid,
+              subtitleBegin: clip.subtitleBegin,
+              subtitleEnd: clip.subtitleEnd,
+              offset: clip.offset,
+              extend: clip.extend,
+              views: clip.views,
+              copies: clip.copies,
+            },
+            meta: {
+              season_number: episode.season.id,
+              season_title: episode.season.title,
+              episode_title: episode.title,
+              episode_number: episode.id,
+              episode_in_season: episode.idInSeason,
+            },
+            lines: matchedSubtitles.map((subtitle) => subtitle.normalize()),
+            thumbnail: url(
+              (
+                await this.generate(clip.getOptions(), {
+                  filetype: 'gif',
+                  renderSubtitles: true,
+                  resolution: 120,
+                })
+              ).generation.getFilepath()
+            ),
+          };
+        })
+      ),
+      count,
+    ] as const;
   },
 
   async trackView(generation: Generation) {

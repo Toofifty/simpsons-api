@@ -80,8 +80,7 @@ router.post('/episode/correction', async (req, res) => {
   }
 
   return json(res, {
-    message:
-      'Correction applied, and existing episode snippets have been purged',
+    message: 'Correction applied, and existing episode clips have been purged',
   });
 });
 
