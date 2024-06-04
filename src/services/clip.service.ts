@@ -14,7 +14,6 @@ import {
 import { Snippet } from '../entities/snippet.entity';
 import type { ObjectQuery } from '@mikro-orm/core';
 import { splitCSV } from '../utils/split-csv';
-import { snapService } from './snap.service';
 
 interface ClipOptions {
   begin: number;
