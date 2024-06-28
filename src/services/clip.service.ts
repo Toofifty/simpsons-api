@@ -551,17 +551,22 @@ export const clipService = {
         this.trackView(generation);
       }
     } catch (e) {
-      console.error(e);
+      console.error('trackViewFromPath:', e);
       return;
     }
   },
 
   async generateFromUrl(path: string) {
-    const { clipOptions, genOptions } = this.decodePath(
-      path.replace('.jpg', '.gif')
-    );
+    try {
+      const { clipOptions, genOptions } = this.decodePath(
+        path.replace('.jpg', '.gif')
+      );
 
-    await this.generate(clipOptions, genOptions);
+      await this.generate(clipOptions, genOptions);
+    } catch (e) {
+      console.error('generateFromUrl:', e);
+      return;
+    }
   },
 
   async trackCopy(uuid: string) {
